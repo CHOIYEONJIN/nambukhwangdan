@@ -1,0 +1,71 @@
+package com.example.nambukhwangdan.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.NavHostController
+import com.example.nambukhwangdan.screens.calender.EmotionCalendarScreen
+import com.example.nambukhwangdan.screens.diary.AnalyzeLoadingScreen
+import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
+import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
+import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
+import com.example.nambukhwangdan.screens.home.HomeScreen
+import com.example.nambukhwangdan.screens.journal.journalScreen
+import com.example.nambukhwangdan.screens.letters.NewLetterScreen
+import com.example.nambukhwangdan.screens.letters.ReplyScreen
+import com.example.nambukhwangdan.screens.onboarding.LoginScreen
+import com.example.nambukhwangdan.screens.onboarding.OnboardingIntroScreen
+import com.example.nambukhwangdan.screens.onboarding.OnboardingNickname
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+
+@Composable
+fun NavGraph(navController: NavHostController) {
+    //navController가 이동할 수 있게 각 route별 이동 위치를 지정함
+    // 상태 private 리스트인 todolist에 접근할 수 있는 viewmodel을 함께 제공함
+    // -> viewmodel없이는 todolist의 데이터를 알 수 없음
+    val viewModel: DiaryViewModel = viewModel()
+    NavHost(navController = navController, startDestination = "OnboardingScreen") {
+        // route 가 list일 떄 TodoListScreen으로 이동함
+        // 할 일 목록 화면으로 이동한다
+        composable("list") {
+            journalScreen(viewModel, navController)
+        }
+        // route 가 addEdit일 때 AddEditTodoScreen으로 이동함
+        // 새로운 todo를 만드는 화면으로 이동할 때 사용하는 route
+        composable (route="EmotionCalendarScreen") {
+            EmotionCalendarScreen()
+        }
+        composable(route="AnalyzeLoadingScreen") {
+            AnalyzeLoadingScreen(viewModel,navController)
+        }
+        composable(route="AnalyzeResultScreen"){
+            AnalyzeResultScreen(viewModel,navController)
+        }
+        composable(route="OnboardingScreen"){
+            OnboardingIntroScreen(viewModel,navController)
+        }
+        composable(route="OnboardingNicknameScreen"){
+            OnboardingNickname(viewModel,navController)
+        }
+        composable(route="LoginScreen"){
+            LoginScreen(viewModel,navController)
+        }
+        composable("HomeScreen"){
+            HomeScreen(viewModel,navController)
+        }
+        composable("NewLetterScreen"){
+            NewLetterScreen(viewModel,navController)
+        }
+        composable("ReplyScreen"){
+            ReplyScreen(viewModel,navController)
+        }
+        composable("DiaryWriteScreen"){
+            DiaryWriteScreen(viewModel,navController)
+        }
+        composable("LetterToTomorrowScreen"){
+            LetterToTomorrowScreen(viewModel,navController)
+        }
+    }
+}
