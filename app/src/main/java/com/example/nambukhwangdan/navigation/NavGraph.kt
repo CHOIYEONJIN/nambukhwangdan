@@ -1,16 +1,17 @@
 package com.example.nambukhwangdan.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.screens.calender.EmotionCalendarScreen
 import com.example.nambukhwangdan.screens.diary.AnalyzeLoadingScreen
 import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
 import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
 import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
+import com.example.nambukhwangdan.screens.diary.PhotoSelectScreen
 import com.example.nambukhwangdan.screens.home.HomeScreen
 import com.example.nambukhwangdan.screens.journal.journalScreen
 import com.example.nambukhwangdan.screens.letters.NewLetterScreen
@@ -26,7 +27,7 @@ fun NavGraph(navController: NavHostController) {
     // 상태 private 리스트인 todolist에 접근할 수 있는 viewmodel을 함께 제공함
     // -> viewmodel없이는 todolist의 데이터를 알 수 없음
     val viewModel: DiaryViewModel = viewModel()
-    NavHost(navController = navController, startDestination = "OnboardingScreen") {
+    NavHost(navController = navController, startDestination = "DiaryWriteScreen") {
         // route 가 list일 떄 TodoListScreen으로 이동함
         // 할 일 목록 화면으로 이동한다
         composable("list") {
@@ -61,11 +62,28 @@ fun NavGraph(navController: NavHostController) {
         composable("ReplyScreen"){
             ReplyScreen(viewModel,navController)
         }
-        composable("DiaryWriteScreen"){
-            DiaryWriteScreen(viewModel,navController)
+        composable("DiaryWriteScreen/{letterId}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("letterId")
+
+            id?.let {
+                LaunchedEffect(it) {
+                    viewModel.loadReplyLetterById(it)
+                }
+            }
+
+            DiaryWriteScreen(
+                viewModel = viewModel,
+                navController = navController
+            )
         }
         composable("LetterToTomorrowScreen"){
             LetterToTomorrowScreen(viewModel,navController)
+        }
+        composable("PhotoSelectScreen"){
+            PhotoSelectScreen(viewModel,navController)
+        }
+        composable("DiaryWriteScreen") {
+            DiaryWriteScreen(viewModel, navController)
         }
     }
 }

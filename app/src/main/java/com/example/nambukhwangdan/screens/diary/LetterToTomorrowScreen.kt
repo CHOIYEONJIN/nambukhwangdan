@@ -1,16 +1,23 @@
 package com.example.nambukhwangdan.screens.diary
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.navigation.NavBackStackEntry
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
@@ -18,18 +25,34 @@ import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 @Composable
 fun LetterToTomorrowScreen(
     viewModel: DiaryViewModel,
-    navController: NavController,
-){
-    var TextForTommorow by remember { mutableStateOf( "") }
+    navController: NavController
+) {
+    var letter by remember { mutableStateOf("") }
 
-    Column {
-        Text("내일의 나에게 보내는 편지 화면")
-        TextField(
-            value = TextForTommorow, onValueChange = { TextForTommorow = it }, label = { Text("내일 보낼 일기 내용을 입력해주세요") }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("내일의 나에게 보낼 편지", fontWeight = FontWeight.Bold)
+        OutlinedTextField(
+            value = letter,
+            onValueChange = { letter = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
         )
-        Button({navController.navigate("HomeScreen")}) {
-            Text("저장하기")
-        }
 
+        Button(
+            onClick = {
+                // 저장 로직은 이후 Firestore 연동 시 구현
+                // 여기선 흐름만 확인
+                navController.navigate("homeScreen")
+                viewModel.clearForNewEntry()
+                navController.popBackStack(route = "diaryWrite", inclusive = false)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("저장하기") }
     }
 }
