@@ -54,7 +54,8 @@ class DiaryViewModel : ViewModel() {
     }
     fun loadReplyLetterById(id: String) {
         // 나중에 repo에서 가져와서 세팅
-        // _replyLetter.value = repository.getById(id)
+        val name=id
+        //_replyLetter.value = repository.getById(id)
     }
 
     fun chooseEmotion(value: String) { selectedEmotion.value = value }
