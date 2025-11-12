@@ -1,5 +1,6 @@
 package com.example.nambukhwangdan.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nambukhwangdan.model.Diary
@@ -30,7 +31,6 @@ class DiaryViewModel : ViewModel() {
     val selectedDateMillis = MutableStateFlow(System.currentTimeMillis())
     // 사진 임시 데이터(로컬 경로/URL)
     val allPhotos = (1..30).map { "https://picsum.photos/seed/$it/300/300" }
-    val selectedPhotos = MutableStateFlow<List<String>>(emptyList())
 
     // 감정 분석 결과(설계서: 자동 추천 표시):contentReference[oaicite:3]{index=3}
     val detectedEmotion = MutableStateFlow<String?>(null)
@@ -41,10 +41,10 @@ class DiaryViewModel : ViewModel() {
 
     fun setSelectedDate(millis: Long) { selectedDateMillis.value = millis }
 
-    fun togglePhoto(url: String) {
-        val cur = selectedPhotos.value.toMutableList()
-        if (cur.contains(url)) cur.remove(url) else cur.add(url)
-        selectedPhotos.value = cur
+    val selectedPhotos = MutableStateFlow<List<Uri>>(emptyList())
+
+    fun setSelectedUris(uris: List<Uri>) {
+        selectedPhotos.value = uris
     }
 
     fun runAnalyze() {
@@ -55,7 +55,7 @@ class DiaryViewModel : ViewModel() {
         }
     }
     fun loadReplyLetterById(id: String) {
-        // TODO: repo에서 가져와서 세팅
+        // 나중에 repo에서 가져와서 세팅
         // _replyLetter.value = repository.getById(id)
     }
 

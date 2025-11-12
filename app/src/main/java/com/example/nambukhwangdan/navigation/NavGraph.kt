@@ -11,7 +11,6 @@ import com.example.nambukhwangdan.screens.diary.AnalyzeLoadingScreen
 import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
 import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
 import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
-import com.example.nambukhwangdan.screens.diary.PhotoSelectScreen
 import com.example.nambukhwangdan.screens.home.HomeScreen
 import com.example.nambukhwangdan.screens.journal.journalScreen
 import com.example.nambukhwangdan.screens.letters.NewLetterScreen
@@ -79,9 +78,7 @@ fun NavGraph(navController: NavHostController) {
         composable("LetterToTomorrowScreen"){
             LetterToTomorrowScreen(viewModel,navController)
         }
-        composable("PhotoSelectScreen"){
-            PhotoSelectScreen(viewModel,navController)
-        }
+
         composable("DiaryWriteScreen") {
             DiaryWriteScreen(viewModel, navController)
         }

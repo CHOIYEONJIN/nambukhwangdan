@@ -1,6 +1,9 @@
 package com.example.nambukhwangdan.screens.diary
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -90,6 +93,13 @@ fun DiaryWriteScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
+        onResult = { uris ->
+            // 선택된 URI 리스트를 ViewModel에 전달
+            viewModel.setSelectedUris(uris)
+        }
+    )
 
     Box(
         modifier = Modifier
@@ -121,7 +131,7 @@ fun DiaryWriteScreen(
                     }
                 }
 
-                // 인디케이터 (기존 유지)
+                // 인디케이터
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
@@ -195,7 +205,7 @@ fun DiaryWriteScreen(
                                 .clip(CircleShape)
                                 .background(Variables.Color6)
                                 .border(1.dp, Variables.Color5, CircleShape)
-                                .clickable { navController.navigate("PhotoSelectScreen") }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
+                                .clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
