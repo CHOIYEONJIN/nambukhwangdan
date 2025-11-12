@@ -83,8 +83,8 @@ fun DiaryWriteScreen(
     )
     val pickedMillis = datePickerState.selectedDateMillis ?: todayMillis
     val headlineStr = remember(pickedMillis) {
-        java.text.SimpleDateFormat("yyyy년 M월 d일", java.util.Locale.KOREA)
-            .format(java.util.Date(pickedMillis))
+        SimpleDateFormat("yyyy년 M월 d일", Locale.KOREA)
+            .format(Date(pickedMillis))
     }
 
     // ✅ 달력 팝업 표시 여부

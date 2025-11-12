@@ -29,8 +29,6 @@ class DiaryViewModel : ViewModel() {
     val todayDiary = MutableStateFlow("")
     // 선택한 날짜(초기값: 오늘)
     val selectedDateMillis = MutableStateFlow(System.currentTimeMillis())
-    // 사진 임시 데이터(로컬 경로/URL)
-    val allPhotos = (1..30).map { "https://picsum.photos/seed/$it/300/300" }
 
     // 감정 분석 결과(설계서: 자동 추천 표시):contentReference[oaicite:3]{index=3}
     val detectedEmotion = MutableStateFlow<String?>(null)
