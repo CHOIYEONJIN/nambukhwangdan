@@ -52,7 +52,7 @@ class DiaryViewModel : ViewModel() {
             detectedEmotion.value = "긍정" // 예시 자동 추천
         }
     }
-    fun loadReplyLetterById(id: String) {
+    fun loadReplyLetterById(_id: String) { // 아직 미구현!!!!!!
         // 나중에 repo에서 가져와서 세팅
         //_replyLetter.value = repository.getById(id)
     }
