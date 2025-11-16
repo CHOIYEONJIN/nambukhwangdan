@@ -3,8 +3,7 @@ package com.example.nambukhwangdan
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.navigation.compose.rememberNavController
-import com.example.nambukhwangdan.navigation.NavGraph
+import com.example.nambukhwangdan.navigation.AppNavHost
 import com.example.nambukhwangdan.ui.theme.NambukhwangdanTheme
 
 class MainActivity : ComponentActivity() {
@@ -12,8 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             NambukhwangdanTheme {
-                val navController = rememberNavController()
-                NavGraph(navController = navController)
+                AppNavHost()
             }
             }
         }
