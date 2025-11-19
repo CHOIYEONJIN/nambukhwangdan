@@ -70,7 +70,7 @@ import java.util.Locale
 @Composable
 fun DiaryWriteScreen(
     viewModel: DiaryViewModel,
-    navController: NavController
+    bottomNavController: NavController
 ) {
     val pastLetters by viewModel.pastLetters.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
@@ -264,7 +264,7 @@ fun DiaryWriteScreen(
 
         // 하단 버튼
         Button(
-            onClick = { navController.navigate("AnalyzeLoadingScreen") },
+            onClick = { viewModel.startAnalyze(bottomNavController) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)
@@ -274,6 +274,9 @@ fun DiaryWriteScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
         ) {
             Text("다음으로", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        }
+        if (viewModel.isAnalyzing) {
+            AnalyzeLoadingOverlay(bottomNavController)   // ← Overlay 컴포저블 호출
         }
 
         // 달력 팝업 구현 부분
@@ -357,7 +360,6 @@ fun DiaryWriteScreen(
         }
     }
 }
-// LazyColumn안에 펼칠 수 있는 card 넣기 위한 함수
 @Composable
 fun ExpandableDiaryCard(content: String) {
     var expanded by remember { mutableStateOf(false) }

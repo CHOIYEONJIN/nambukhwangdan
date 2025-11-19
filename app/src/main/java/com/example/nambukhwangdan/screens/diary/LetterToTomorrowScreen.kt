@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,7 +49,9 @@ fun LetterToTomorrowScreen(
             onClick = {
                 // 저장 로직은 이후 Firestore 연동 시 구현
                 // 여기선 흐름만 확인
-                navController.navigate("homeScreen")
+                navController.navigate(Routes.Home) {
+                    popUpTo(Routes.MainHost)
+                }
                 viewModel.clearForNewEntry()
                 navController.popBackStack(route = "diaryWrite", inclusive = false)
             },

@@ -2,29 +2,49 @@ package com.example.nambukhwangdan.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nambukhwangdan.ui.theme.*
-import kotlin.random.Random
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import com.example.nambukhwangdan.navigation.Routes
+import com.example.nambukhwangdan.ui.theme.Background
+import com.example.nambukhwangdan.ui.theme.Primary
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import kotlin.random.Random
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen( viewModel: DiaryViewModel,
+                bottomNavController: NavController) {
     val pretendard = FontFamily.Default
     val note1X = Random.nextInt(20, 150).dp
     val note1Y = Random.nextInt(60, 200).dp
@@ -164,7 +184,8 @@ fun HomeScreen() {
         Dialog(onDismissRequest = { showPopup = false }) {
             CustomNotePopup(
                 onClose = { showPopup = false },
-                noteContent = "편지 B의 내용입니다."
+                noteContent = "편지 B의 내용입니다.",
+                bottomNavController
             )
         }
     }
@@ -173,7 +194,8 @@ fun HomeScreen() {
 @Composable
 fun CustomNotePopup(
     onClose: () -> Unit,
-    noteContent: String
+    noteContent: String,
+    bottomNavController: NavController
 ) {
     val pretendard = FontFamily.Default
 
@@ -204,7 +226,22 @@ fun CustomNotePopup(
                 color = Color.Gray,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
-
+            Button(
+                onClick = { bottomNavController.navigate(Routes.DiaryWrite) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+            ) {
+                Text(
+                    text = "답장하기",
+                    fontFamily = pretendard,
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
             Button(
                 onClick = onClose,
                 modifier = Modifier
@@ -222,18 +259,4 @@ fun CustomNotePopup(
             }
         }
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-
-@Composable
-
-private fun HomeScreenPreview() {
-
-    MaterialTheme {
-
-        HomeScreen()
-
-    }
-
 }

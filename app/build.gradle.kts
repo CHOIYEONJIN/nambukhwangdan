@@ -59,6 +59,7 @@ dependencies {
     // icons
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.compose.ui.test)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

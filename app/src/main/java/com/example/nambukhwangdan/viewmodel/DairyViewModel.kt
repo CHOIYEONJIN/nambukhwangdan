@@ -1,9 +1,14 @@
 package com.example.nambukhwangdan.viewmodel
 
 import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +18,8 @@ import java.util.UUID
 
 class DiaryViewModel : ViewModel() {
 
+    var isAnalyzing by mutableStateOf(false)
+        private set
     // 설계서: "과거의 내 편지 표시":contentReference[oaicite:2]{index=2}
     private val _pastLetters = MutableStateFlow(
         listOf(
@@ -45,11 +52,12 @@ class DiaryViewModel : ViewModel() {
         selectedPhotos.value = uris
     }
 
-    fun runAnalyze() {
+    fun runAnalyze(bottomNavController: NavController) {
         // 실제에선 API 호출; 지금은 로딩 시뮬레이션
         viewModelScope.launch {
             delay(1200)
             detectedEmotion.value = "긍정" // 예시 자동 추천
+            bottomNavController.navigate(Routes.AnalyzeResult)
         }
     }
     fun loadReplyLetterById(_id: String) { // 아직 미구현!!!!!!
@@ -67,5 +75,9 @@ class DiaryViewModel : ViewModel() {
         detectedEmotion.value = null
         selectedEmotion.value = null
         selectedSticker.value = null
+    }
+    fun startAnalyze(bottomNavController: NavController) {
+        isAnalyzing = true
+        runAnalyze(bottomNavController)  // 기존 분석 함수
     }
 }
