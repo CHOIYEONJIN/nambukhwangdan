@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -234,14 +235,13 @@ fun AnalyzeResultScreen(
 
 
                         Text("상세 감정 스티커 선택", fontWeight = FontWeight.Bold)
-                        Text("상세 감정 스티커 선택", fontWeight = FontWeight.Bold)
 
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(5),     // ← 한 줄에 5개!
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(10.dp)
-                                .wrapContentHeight(),          // 필요한 만큼만 세로 공간 사용
+                                .heightIn(min = 80.dp, max = 200.dp),   // 안정적인 높이 확보!
                             horizontalArrangement = Arrangement.Center
                         ) {
                             items(detailStickers) { sticker ->
