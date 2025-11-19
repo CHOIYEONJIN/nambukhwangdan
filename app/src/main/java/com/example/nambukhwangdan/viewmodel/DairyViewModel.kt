@@ -80,4 +80,19 @@ class DiaryViewModel : ViewModel() {
         isAnalyzing = true
         runAnalyze(bottomNavController)  // 기존 분석 함수
     }
+    fun addDiary(diary: Diary) {
+        _pastLetters.value = _pastLetters.value + diary
+    }
+    private val _isAnonymous = MutableStateFlow(false)
+    val isAnonymous = _isAnonymous.asStateFlow()
+
+    private val userNickname = "닉네임" // 실제 로그인 정보에서 가져올 예정 (임시)
+    private val _nicknameToUse = MutableStateFlow(userNickname)
+    val nicknameToUse = _nicknameToUse.asStateFlow()
+
+    fun onAnonymousCheckedChange(newValue: Boolean) {
+        _isAnonymous.value = newValue
+        _nicknameToUse.value = if (newValue) "익명" else userNickname
+    }
+
 }

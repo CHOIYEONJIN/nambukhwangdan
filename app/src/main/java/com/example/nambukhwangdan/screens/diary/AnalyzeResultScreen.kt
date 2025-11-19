@@ -237,7 +237,7 @@ fun AnalyzeResultScreen(
                         Text("상세 감정 스티커 선택", fontWeight = FontWeight.Bold)
 
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(5),     // ← 한 줄에 5개!
+                            columns = GridCells.Fixed(5),     // 한 줄에 5개씩
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(10.dp)
