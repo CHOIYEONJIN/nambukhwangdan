@@ -192,7 +192,7 @@ fun NewLetterScreen(
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(20.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                        horizontalAlignment = Alignment.Start
                                     ) {
                                         Text("받을 사람을 선택해 주세요")
 
@@ -345,7 +345,7 @@ fun NewLetterScreen(
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
         ) {
-            Text("다음으로", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Text("저장하기", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         }
 
         // 달력 팝업 구현 부분
