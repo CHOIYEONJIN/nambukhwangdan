@@ -59,6 +59,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.nambukhwangdan.screens.letters.ExpandableDiaryCard
+import com.example.nambukhwangdan.screens.letters.formatDate
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
@@ -100,6 +102,11 @@ fun DiaryWriteScreen(
             viewModel.setSelectedUris(uris)
         }
     )
+    val replyToId by viewModel.replyToId.collectAsState()
+
+// pastLetters 중 replyToId와 동일한 id를 가진 것만 필터링
+    val replyLetter = pastLetters.find { it.id == replyToId }
+
 
     Box(
         modifier = Modifier
@@ -166,23 +173,24 @@ fun DiaryWriteScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 과거 일기 카드
-                items(pastLetters.size) { index ->
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        //과거 일기 text 부분
-                        Text(
-                            "${formatDate(pastLetters[index].createdAt)}의 ${pastLetters[index].nickname}에게서 온 편지",
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        ExpandableDiaryCard(pastLetters[index].content)
+                // 특정 편지 하나만 보여주기
+                replyLetter?.let { letter ->
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp)
+                                .shadow(4.dp, RoundedCornerShape(10.dp))
+                                .fillMaxWidth()
+                                .background(Variables.Color6, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "${formatDate(letter.createdAt)}의 ${letter.nickname}에게서 온 편지",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            ExpandableDiaryCard(letter.content)
+                        }
                     }
                 }
 

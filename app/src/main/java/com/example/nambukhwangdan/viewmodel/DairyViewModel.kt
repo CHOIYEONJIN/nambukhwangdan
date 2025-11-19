@@ -42,6 +42,9 @@ class DiaryViewModel : ViewModel() {
     val selectedEmotion = MutableStateFlow<String?>(null)
     val selectedSticker = MutableStateFlow<String?>(null)
 
+    val receiverName = MutableStateFlow("누군가")
+
+
     fun updateDiary(text: String) { todayDiary.value = text }
 
     fun setSelectedDate(millis: Long) { selectedDateMillis.value = millis }
@@ -93,6 +96,16 @@ class DiaryViewModel : ViewModel() {
     fun onAnonymousCheckedChange(newValue: Boolean) {
         _isAnonymous.value = newValue
         _nicknameToUse.value = if (newValue) "익명" else userNickname
+    }
+    val replyToId = MutableStateFlow<String?>(null)
+
+    fun setReplyToId(id: String) {
+        replyToId.value = id
+    }
+    // 받는 사람 이름 상태
+
+    fun setReceiver(name: String) {
+        receiverName.value = name
     }
 
 }

@@ -35,11 +35,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,17 +52,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -73,10 +79,14 @@ fun NewLetterScreen(
     viewModel: DiaryViewModel,
     bottomNavController: NavController
 ) {
+    var showReceiverDialog by remember { mutableStateOf(false) }
     val pastLetters by viewModel.pastLetters.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
+    val receiverName by viewModel.receiverName.collectAsState()
+
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
@@ -101,6 +111,15 @@ fun NewLetterScreen(
             viewModel.setSelectedUris(uris)
         }
     )
+    LaunchedEffect(Unit) {
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 21)
+            set(Calendar.MINUTE, 0)
+        }
+        viewModel.setSelectedDate(calendar.timeInMillis)
+    }
+
 
     Box(
         modifier = Modifier
@@ -135,25 +154,83 @@ fun NewLetterScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 과거 일기 카드
-                items(pastLetters.size) { index ->
+                //편지 전송 날짜 및 발신인 선택
+                item {
                     Column(
                         modifier = Modifier
                             .padding(horizontal = 20.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
+                            .fillMaxWidth().background(Variables.Color6, RoundedCornerShape(10.dp))
                             .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        //과거 일기 text 부분
-                        Text(
-                            "${formatDate(pastLetters[index].createdAt)}의 ${pastLetters[index].nickname}에게서 온 편지",
-                            fontWeight = FontWeight.SemiBold
+                            horizontalAlignment = Alignment.CenterHorizontally
                         )
-                        ExpandableDiaryCard(pastLetters[index].content)
+                    {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Text(
+                                text = "${formatDate(dateMillis)} 23:00 의 ",
+                                fontSize = 13.sp,
+                                color = Variables.Color5,                 // 강조 색
+                                fontWeight = FontWeight.SemiBold,         // 글자 강조
+                                modifier = Modifier
+                                    .clickable { showCalendar = true }
+                                    .padding(2.dp)                        // 클릭 영역 확대
+                            )
+                            Text(
+                                text = receiverName,
+                                color = Variables.Color5,
+                                fontSize = 13.sp,
+                                modifier = Modifier.clickable { showReceiverDialog = true }
+                            )
+
+                            Text(text = "에게 보낼 편지", fontSize = 13.sp)
+                        }
+                        }
+                        if (showReceiverDialog) {
+                            Dialog(onDismissRequest = { showReceiverDialog = false }) {
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.padding(20.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("받을 사람을 선택해 주세요")
+
+                                        Spacer(Modifier.height(12.dp))
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            RadioButton(
+                                                selected = (receiverName == "미래의 나"),
+                                                onClick = {
+                                                    viewModel.setReceiver("미래의 나")
+                                                    showReceiverDialog = false
+                                                }
+                                            )
+                                            Text("미래의 나")
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            RadioButton(
+                                                selected = (receiverName == "익명의 누군가"),
+                                                onClick = {
+                                                    viewModel.setReceiver("익명의 누군가")
+                                                    showReceiverDialog = false
+                                                }
+                                            )
+                                            Text("익명의 누군가")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                     }
-                }
+
+
 
                 // 오늘의 일기 작성 박스
                 item {
@@ -238,7 +315,7 @@ fun NewLetterScreen(
                                 checked = isAnonymous,
                                 onCheckedChange = { viewModel.onAnonymousCheckedChange(it) }
                             )
-                            Text(text = "익명으로 작성", fontSize = 12.sp)
+                            Text(text = "익명", fontSize = 12.sp)
                         }
 
                     }
@@ -260,7 +337,10 @@ fun NewLetterScreen(
 
                 // 예: pastLetters에 추가 (샘플)
                 viewModel.addDiary(newDiary)
-                viewModel.startAnalyze(bottomNavController) },
+                bottomNavController.navigate(Routes.Home) {
+                    popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
+                    launchSingleTop = true                          // ← 중복 생성 방지
+                }},
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)

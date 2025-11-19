@@ -16,6 +16,7 @@ import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
 import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
 import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
 import com.example.nambukhwangdan.screens.journal.JournalScreen
+import com.example.nambukhwangdan.screens.letters.NewLetterScreen
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
 // TODO: 나머지 탭 화면 (Journal, Inbox, Settings)은 더미 파일 사용
@@ -75,6 +76,12 @@ fun MainScreenHost(
                 LetterToTomorrowScreen(
                     viewModel = diaryViewModel,
                     navController = bottomNavController
+                )
+            }
+            composable(Routes.NewLetter){
+                NewLetterScreen(
+                    viewModel=diaryViewModel,
+                    bottomNavController=bottomNavController
                 )
             }
 
