@@ -52,7 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -80,13 +79,10 @@ fun NewLetterScreen(
     bottomNavController: NavController
 ) {
     var showReceiverDialog by remember { mutableStateOf(false) }
-    val pastLetters by viewModel.pastLetters.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
     val receiverName by viewModel.receiverName.collectAsState()
-
-    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
@@ -353,6 +349,7 @@ fun NewLetterScreen(
         }
 
         // 달력 팝업 구현 부분
+        //TODO: Timepicker 구현해야함
         if (showCalendar) {
             Box(
                 modifier = Modifier

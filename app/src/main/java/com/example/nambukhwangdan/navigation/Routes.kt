@@ -14,7 +14,6 @@ object Routes {
     const val Calendar = "calendar"
     const val Settings = "settings"
     const val DiaryWrite = "diary_write"
-    const val AnalyzeLoading = "analyze_loading"
     const val AnalyzeResult = "analyze_result"
     const val LetterToTomorrow = "letter_to_tomorrow"
     const val NewLetter="NewLetter"
