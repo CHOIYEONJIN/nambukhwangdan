@@ -230,7 +230,7 @@ fun CustomNotePopup(
             Button(
                 onClick = {
                     viewModel.setReplyToId(diary.id)
-                    bottomNavController.navigate(Routes.NewLetter)
+                    bottomNavController.navigate(Routes.DiaryWrite)
                           },
                 modifier = Modifier
                     .fillMaxWidth()

@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
+import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
@@ -77,6 +78,8 @@ fun AnalyzeResultScreen(
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
+    val replyToId by viewModel.replyToId.collectAsState()
+    val replyLetter = pastLetters.find { it.id == replyToId }
 
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
@@ -98,7 +101,7 @@ fun AnalyzeResultScreen(
     val selectedEmotion by viewModel.selectedEmotion.collectAsState()
     val selectedSticker by viewModel.selectedSticker.collectAsState()
     val emotionCats = listOf("긍정", "중립", "부정")
-    val safeEmotion = selectedEmotion ?: detected ?: "기쁨"  // 안전한 기본값!
+    val safeEmotion = selectedEmotion ?: detected ?: "기쁨"  //기본값
 
     val detailStickers = remember(safeEmotion) {
         when (safeEmotion) {
@@ -174,21 +177,22 @@ fun AnalyzeResultScreen(
                     .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            ) { replyLetter?.let { letter ->
                 // 오늘 일기 카드
-                items(pastLetters.size) { index ->
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    items(pastLetters.size) { index ->
+                        Column(
+                         modifier = Modifier
+                               .padding(horizontal = 20.dp)
+                                .shadow(4.dp, RoundedCornerShape(10.dp))
+                               .fillMaxWidth()
+                               .background(Surface, RoundedCornerShape(10.dp))
+                               .padding(horizontal = 20.dp, vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                         //오늘 일기 text 부분
-                        Text("오늘의 일기 미리보기", fontWeight = FontWeight.Bold)
-                        ExpandableDiaryCard(diary)
+                            Text("오늘의 일기 미리보기", fontWeight = FontWeight.Bold)
+                            ExpandableDiaryCard(diary)
+                        }
                     }
                 }
 
@@ -200,7 +204,7 @@ fun AnalyzeResultScreen(
                                 .padding(horizontal = 30.dp)
                                 .shadow(4.dp, RoundedCornerShape(10.dp))
                                 .fillMaxWidth()
-                                .background(Variables.Color6, RoundedCornerShape(10.dp))
+                                .background(Surface, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -289,7 +293,7 @@ fun AnalyzeResultScreen(
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Variables.Color6),
+                    colors = CardDefaults.cardColors(containerColor =Surface),
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
@@ -321,7 +325,7 @@ fun AnalyzeResultScreen(
                             },
                             showModeToggle = false,
                             colors = DatePickerDefaults.colors(
-                                containerColor = Variables.Color6,
+                                containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black,
                                 selectedDayContainerColor = Variables.Color5,

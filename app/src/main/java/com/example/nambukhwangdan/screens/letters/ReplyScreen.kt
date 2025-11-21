@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.screens.diary.AnalyzeLoadingOverlay
+import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
@@ -174,7 +175,7 @@ fun ReplyScreen(viewModel: DiaryViewModel,
                                 .padding(horizontal = 20.dp)
                                 .shadow(4.dp, RoundedCornerShape(10.dp))
                                 .fillMaxWidth()
-                                .background(Variables.Color6, RoundedCornerShape(10.dp))
+                                .background(Surface, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -195,7 +196,7 @@ fun ReplyScreen(viewModel: DiaryViewModel,
                             .padding(horizontal = 30.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
                             .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
+                            .background(Surface, RoundedCornerShape(10.dp))
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -204,7 +205,7 @@ fun ReplyScreen(viewModel: DiaryViewModel,
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Variables.Color6)
+                                .background(Surface)
                                 .border(1.dp, Variables.Color5, CircleShape)
                                 .clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
                             contentAlignment = Alignment.Center
@@ -247,8 +248,8 @@ fun ReplyScreen(viewModel: DiaryViewModel,
                                 .wrapContentHeight()
                                 .animateContentSize(),
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Variables.Color6,
-                                unfocusedContainerColor = Variables.Color6,
+                                focusedContainerColor = Surface,
+                                unfocusedContainerColor = Surface,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
                                 cursorColor = Variables.Color4,
@@ -307,7 +308,7 @@ fun ReplyScreen(viewModel: DiaryViewModel,
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Variables.Color6),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
@@ -339,7 +340,7 @@ fun ReplyScreen(viewModel: DiaryViewModel,
                             },
                             showModeToggle = false,
                             colors = DatePickerDefaults.colors(
-                                containerColor = Variables.Color6,
+                                containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black ,
                                 selectedDayContainerColor = Variables.Color5,

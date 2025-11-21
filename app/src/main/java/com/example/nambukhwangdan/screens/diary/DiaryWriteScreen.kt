@@ -42,6 +42,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +62,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.screens.letters.ExpandableDiaryCard
 import com.example.nambukhwangdan.screens.letters.formatDate
+import com.example.nambukhwangdan.ui.theme.Background
+import com.example.nambukhwangdan.ui.theme.Primary
+import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
@@ -74,6 +78,7 @@ fun DiaryWriteScreen(
     viewModel: DiaryViewModel,
     bottomNavController: NavController
 ) {
+
     val pastLetters by viewModel.pastLetters.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
@@ -102,6 +107,9 @@ fun DiaryWriteScreen(
             viewModel.setSelectedUris(uris)
         }
     )
+    LaunchedEffect(Unit) {
+        viewModel.updateDiary("")   // 항상 입력 칸은 빈칸
+    }
     val replyToId by viewModel.replyToId.collectAsState()
 
 // pastLetters 중 replyToId와 동일한 id를 가진 것만 필터링
@@ -181,7 +189,7 @@ fun DiaryWriteScreen(
                                 .padding(horizontal = 20.dp)
                                 .shadow(4.dp, RoundedCornerShape(10.dp))
                                 .fillMaxWidth()
-                                .background(Variables.Color6, RoundedCornerShape(10.dp))
+                                .background(Surface, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -202,7 +210,7 @@ fun DiaryWriteScreen(
                             .padding(horizontal = 30.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
                             .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
+                            .background(Surface, RoundedCornerShape(10.dp))
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -211,7 +219,7 @@ fun DiaryWriteScreen(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Variables.Color6)
+                                .background(Surface)
                                 .border(1.dp, Variables.Color5, CircleShape)
                                 .clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
                             contentAlignment = Alignment.Center
@@ -254,15 +262,15 @@ fun DiaryWriteScreen(
                                 .wrapContentHeight()
                                 .animateContentSize(),
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Variables.Color6,
-                                unfocusedContainerColor = Variables.Color6,
+                                focusedContainerColor = Surface,
+                                unfocusedContainerColor = Surface,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = Variables.Color4,
+                                cursorColor = Primary,
                                 focusedTextColor = Color.Black,
                                 unfocusedTextColor = Color.Black,
-                                focusedPlaceholderColor = Variables.Color4,
-                                unfocusedPlaceholderColor = Color.Black
+                                focusedPlaceholderColor = Background,
+                                unfocusedPlaceholderColor = Primary
                             )
                         )
                     }
@@ -298,7 +306,7 @@ fun DiaryWriteScreen(
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Variables.Color6),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
@@ -330,7 +338,7 @@ fun DiaryWriteScreen(
                             },
                             showModeToggle = false,
                             colors = DatePickerDefaults.colors(
-                                containerColor = Variables.Color6,
+                                containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black ,
                                 selectedDayContainerColor = Variables.Color5,
@@ -378,7 +386,7 @@ fun ExpandableDiaryCard(content: String) {
             .animateContentSize()
             .clickable { expanded = !expanded },
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Variables.Color6)
+        colors = CardDefaults.cardColors(containerColor = Surface)
 
     ) {
         Column(Modifier.padding(12.dp)) {
