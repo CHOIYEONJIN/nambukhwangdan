@@ -1,6 +1,6 @@
 
 package com.example.nambukhwangdan.data.local
-
+import com.example.nambukhwangdan.data.local.DiaryDao
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters

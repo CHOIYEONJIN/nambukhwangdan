@@ -7,17 +7,24 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import com.example.nambukhwangdan.data.repository.DiaryRepository
 import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.DiaryEntity
 import com.example.nambukhwangdan.navigation.Routes
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+import javax.inject.Inject
 
-
-class DiaryViewModel : ViewModel() {
-
+@HiltViewModel
+class DiaryViewModel @Inject constructor(
+    private val repo: DiaryRepository
+) : ViewModel() {
     var isAnalyzing by mutableStateOf(false)
         private set
     // 설계서: "과거의 내 편지 표시":contentReference[oaicite:2]{index=2}
@@ -107,5 +114,16 @@ class DiaryViewModel : ViewModel() {
     fun setReceiver(name: String) {
         receiverName.value = name
     }
+    // --- Repository를 사용하는 로직 (기존 두 번째 ViewModel의 내용) ---
+    val allDiaries = repo.getAllDiaries()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-}
+    fun saveDiary(diary: DiaryEntity) {
+        viewModelScope.launch {
+            repo.insertDiary(diary)
+        }
+    }
+
+    }
+
+
