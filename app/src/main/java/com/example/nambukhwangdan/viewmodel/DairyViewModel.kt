@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.data.repository.DiaryRepository
 import com.example.nambukhwangdan.model.Diary
-import com.example.nambukhwangdan.model.DiaryEntity
+import com.example.nambukhwangdan.model.toEntity
 import com.example.nambukhwangdan.navigation.Routes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -118,9 +118,9 @@ class DiaryViewModel @Inject constructor(
     val allDiaries = repo.getAllDiaries()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun saveDiary(diary: DiaryEntity) {
+    fun saveDiary(diary: Diary) {
         viewModelScope.launch {
-            repo.insertDiary(diary)
+            repo.insertDiary(diary.toEntity())
         }
     }
 
