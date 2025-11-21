@@ -11,6 +11,9 @@ Diary -> DiaryEntity 변환을 위한 diaryMapping 파일 작성 완료
 
 연결된 데이터 기반 감정캘린더 화면 제작
 
+FireBase 연결
+
+
 **새로 추가된 파일별 기능 설명**
 
 DiaryEntity -> diary를 DB에 저장 가능하게 만든 버전
