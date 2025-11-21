@@ -119,7 +119,7 @@ fun DiaryWriteScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Variables.Color4)
+            .background(color = Background)
     ) {
         // 🔹 메인 컨텐츠
         Column(
