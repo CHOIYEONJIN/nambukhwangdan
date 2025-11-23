@@ -49,7 +49,8 @@ class DiaryViewModel @Inject constructor(
     val selectedEmotion = MutableStateFlow<String?>(null)
     val selectedSticker = MutableStateFlow<String?>(null)
 
-    val receiverName = MutableStateFlow("누군가")
+    private val defaultReceiver = "누군가"
+    val receiverName = MutableStateFlow(defaultReceiver)
 
 
     fun updateDiary(text: String) { todayDiary.value = text }
@@ -67,6 +68,7 @@ class DiaryViewModel @Inject constructor(
         viewModelScope.launch {
             delay(1200)
             detectedEmotion.value = "긍정" // 예시 자동 추천
+            isAnalyzing = false
             bottomNavController.navigate(Routes.AnalyzeResult)
         }
     }
@@ -85,6 +87,9 @@ class DiaryViewModel @Inject constructor(
         detectedEmotion.value = null
         selectedEmotion.value = null
         selectedSticker.value = null
+        replyToId.value = null
+        receiverName.value = defaultReceiver
+        selectedDateMillis.value = System.currentTimeMillis()
     }
 
     private fun buildDiary(
