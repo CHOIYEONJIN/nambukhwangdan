@@ -85,6 +85,8 @@ fun NewLetterScreen(
     var showReceiverDialog by remember { mutableStateOf(false) }
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
+    val selectedEmotion by viewModel.selectedEmotion.collectAsState()
+    val selectedSticker by viewModel.selectedSticker.collectAsState()
     val todayMillis = System.currentTimeMillis()
     val receiverName by viewModel.receiverName.collectAsState()
 
@@ -325,22 +327,28 @@ fun NewLetterScreen(
 
         // 하단 버튼
         Button(
-            onClick = {  val nickname = viewModel.nicknameToUse.value
-
+            onClick = {
+                val nickname = viewModel.nicknameToUse.value
                 val newDiary = Diary(
                     id = UUID.randomUUID().toString(),
                     content = diary,
-                    nickname = nickname,             // 👈 ✔ 익명 / 실제 닉네임 반영됨
-                    sendToFuture = false,
-                    createdAt = System.currentTimeMillis()
+                    emotion = selectedEmotion ?: "",
+                    sticker = selectedSticker,
+                    date = dateMillis,
+                    sendToFuture = receiverName == "미래의 나",
+                    createdAt = System.currentTimeMillis(),
+                    nickname = nickname             // 👈 ✔ 익명 / 실제 닉네임 반영됨
                 )
 
                 // 예: pastLetters에 추가 (샘플)
                 viewModel.addDiary(newDiary)
+                viewModel.saveDiary(newDiary)
+                viewModel.clearForNewEntry()
                 bottomNavController.navigate(Routes.Home) {
                     popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
                     launchSingleTop = true                          // ← 중복 생성 방지
-                }},
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)
