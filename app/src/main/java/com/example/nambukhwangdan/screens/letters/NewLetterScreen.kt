@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.example.nambukhwangdan.model.Diary
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
@@ -69,7 +68,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 
 @SuppressLint("RememberReturnType")
@@ -328,22 +326,11 @@ fun NewLetterScreen(
         // 하단 버튼
         Button(
             onClick = {
-                val nickname = viewModel.nicknameToUse.value
-                val newDiary = Diary(
-                    id = UUID.randomUUID().toString(),
+                viewModel.persistDiary(
                     content = diary,
-                    emotion = selectedEmotion ?: "",
-                    sticker = selectedSticker,
-                    date = dateMillis,
                     sendToFuture = receiverName == "미래의 나",
-                    createdAt = System.currentTimeMillis(),
-                    nickname = nickname             // 👈 ✔ 익명 / 실제 닉네임 반영됨
+                    dateMillis = dateMillis
                 )
-
-                // 예: pastLetters에 추가 (샘플)
-                viewModel.addDiary(newDiary)
-                viewModel.saveDiary(newDiary)
-                viewModel.clearForNewEntry()
                 bottomNavController.navigate(Routes.Home) {
                     popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
                     launchSingleTop = true                          // ← 중복 생성 방지

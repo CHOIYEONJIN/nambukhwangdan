@@ -86,6 +86,37 @@ class DiaryViewModel @Inject constructor(
         selectedEmotion.value = null
         selectedSticker.value = null
     }
+
+    private fun buildDiary(
+        content: String = todayDiary.value,
+        sendToFuture: Boolean = false,
+        dateMillis: Long = selectedDateMillis.value
+    ): Diary {
+        val emotionToSave = selectedEmotion.value ?: detectedEmotion.value ?: ""
+        return Diary(
+            id = UUID.randomUUID().toString(),
+            content = content,
+            emotion = emotionToSave,
+            sticker = selectedSticker.value,
+            date = dateMillis,
+            sendToFuture = sendToFuture,
+            replyToId = replyToId.value,
+            createdAt = System.currentTimeMillis(),
+            nickname = nicknameToUse.value
+        )
+    }
+
+    fun persistDiary(
+        content: String = todayDiary.value,
+        sendToFuture: Boolean = false,
+        dateMillis: Long = selectedDateMillis.value
+    ): Diary {
+        val diary = buildDiary(content, sendToFuture, dateMillis)
+        addDiary(diary)
+        saveDiary(diary)
+        clearForNewEntry()
+        return diary
+    }
     fun startAnalyze(bottomNavController: NavController) {
         isAnalyzing = true
         runAnalyze(bottomNavController)  // 기존 분석 함수
