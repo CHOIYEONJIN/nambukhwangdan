@@ -269,7 +269,13 @@ fun AnalyzeResultScreen(
         }
         // 하단 버튼
         Button(
-            onClick = { bottomNavController.navigate(Routes.Home)},
+            onClick = {
+                viewModel.persistDiary(
+                    content = diary,
+                    dateMillis = dateMillis
+                )
+                bottomNavController.navigate(Routes.Home)
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)

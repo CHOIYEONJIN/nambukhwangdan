@@ -11,10 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,7 +25,8 @@ fun LetterToTomorrowScreen(
     viewModel: DiaryViewModel,
     navController: NavController
 ) {
-    var letter by remember { mutableStateOf("") }
+    val diary by viewModel.todayDiary.collectAsState()
+    val dateMillis by viewModel.selectedDateMillis.collectAsState()
 
     Column(
         Modifier
@@ -38,8 +36,8 @@ fun LetterToTomorrowScreen(
     ) {
         Text("내일의 나에게 보낼 편지", fontWeight = FontWeight.Bold)
         OutlinedTextField(
-            value = letter,
-            onValueChange = { letter = it },
+            value = diary,
+            onValueChange = { viewModel.updateDiary(it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(240.dp)
@@ -47,12 +45,14 @@ fun LetterToTomorrowScreen(
 
         Button(
             onClick = {
-                // 저장 로직은 이후 Firestore 연동 시 구현
-                // 여기선 흐름만 확인
+                viewModel.persistDiary(
+                    content = diary,
+                    sendToFuture = true,
+                    dateMillis = dateMillis
+                )
                 navController.navigate(Routes.Home) {
                     popUpTo(Routes.MainHost)
                 }
-                viewModel.clearForNewEntry()
                 navController.popBackStack(route = "diaryWrite", inclusive = false)
             },
             modifier = Modifier.fillMaxWidth()
