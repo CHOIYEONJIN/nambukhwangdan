@@ -1,5 +1,7 @@
 package com.example.nambukhwangdan.screens.journal
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Card
@@ -29,8 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,11 +53,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun JournalScreen(
     viewModel: DiaryViewModel
 ) {
-    val diaries by viewModel.allDiaries.collectAsState()
+    // ViewModel에서 Flow<List<Diary>> 가져오기
+    val diaries by viewModel.sortedDiaries.collectAsState()    // 최신순 정렬
     val sortedDiaries = diaries.sortedByDescending { it.createdAt }
 
     Column(
@@ -71,7 +76,12 @@ fun JournalScreen(
         if (sortedDiaries.isEmpty()) {
             EmptyJournalState()
         } else {
-            DiaryList(diaries = sortedDiaries)
+            // 🔥 여기서 ViewModel로 좋아요 토글 연결
+            DiaryList(
+                diaries = sortedDiaries,
+                onToggleLike = { id -> viewModel.toggleLike(id) },
+                onDelete = { id -> viewModel.deleteDiary(id) }
+            )
         }
     }
 }
@@ -92,6 +102,7 @@ private fun JournalHeader() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun JournalDateToolbar() {
     val today = Instant.now().atZone(ZoneId.systemDefault()).toLocalDate()
@@ -124,8 +135,13 @@ private fun JournalDateToolbar() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun DiaryList(diaries: List<Diary>) {
+private fun DiaryList(
+    diaries: List<Diary>,
+    onToggleLike: (String) -> Unit,
+    onDelete: (String) -> Unit    // 🔥 추가
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -135,17 +151,22 @@ private fun DiaryList(diaries: List<Diary>) {
             DiaryCard(
                 diary = diary,
                 expanded = expanded,
-                onToggle = { expanded = !expanded }
+                onToggle = { expanded = !expanded },
+                onToggleLike = { onToggleLike(diary.id) },
+                onDelete = { onDelete(diary.id) }// 🔥 개별 카드에 전달
             )
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun DiaryCard(
     diary: Diary,
     expanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onToggleLike: () -> Unit,
+    onDelete: (String) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -179,21 +200,40 @@ private fun DiaryCard(
                     }
                 }
 
-                Icon(
-                    imageVector = if (diary.liked) Icons.Rounded.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = null,
-                    tint = if (diary.liked) Primary else Color(0xFF8D8D8D)
-                )
+                // 🔥 아이콘 영역 (삭제 + 좋아요)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    // 🗑 삭제 버튼 추가
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "delete diary",
+                        modifier = Modifier.clickable { onDelete(diary.id) },
+                        tint = Color(0xFFB00020) // 오류/삭제 계열 색상
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // ❤️ 좋아요 버튼 (기존 유지)
+                    Icon(
+                        imageVector = if (diary.liked) Icons.Rounded.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
+                        modifier = Modifier.clickable { onToggleLike() },
+                        tint = if (diary.liked) Primary else Color(0xFF8D8D8D)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = diary.content,
-                color = Color.Black,
-                fontSize = 14.sp,
-                maxLines = if (expanded) Int.MAX_VALUE else 3,
-                overflow = TextOverflow.Ellipsis
-            )
+
+            diary.content?.let {
+                Text(
+                    text = it,
+                    color = Color.Black,
+                    fontSize = 14.sp,
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
             if (!diary.sticker.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -248,12 +288,14 @@ private fun EmptyJournalState() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 private fun Long.dayLabel(): String {
     val date = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
     val monthFormatter = DateTimeFormatter.ofPattern("d일 E", Locale.KOREAN)
     return monthFormatter.format(date)
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 private fun Long.fullDateLabel(): String {
     val dateTime = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault())
     val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd (EEE)", Locale.KOREAN)

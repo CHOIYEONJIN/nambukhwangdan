@@ -188,7 +188,39 @@ class DiaryViewModel @Inject constructor(
             repo.insertDiary(diary.toEntity())
         }
     }
+    private val _sortedDiaries = MutableStateFlow<List<Diary>>(emptyList())
+    val sortedDiaries = _sortedDiaries.asStateFlow()
 
+    init {
+        // DB 변경 시 자동 반영
+        viewModelScope.launch {
+            repo.getAllDiaries().collect { list ->
+                _sortedDiaries.value = list.map { it.toDiary() }
+                    .sortedByDescending { it.createdAt }
+            }
+        }
     }
+
+    fun toggleLike(id: String) {
+        viewModelScope.launch {
+            repo.toggleLike(id)
+            refreshDiaries()         // 🔥 DB 갱신 후 다시 정렬
+        }
+    }
+
+    private suspend fun refreshDiaries() {
+        val updatedList = repo.getAllDiariesOnce()    // 🔥 여기가 에러났던 부분
+            .map { it.toDiary() }
+            .sortedByDescending { it.createdAt }
+        _sortedDiaries.value = updatedList
+    }
+    fun deleteDiary(id: String) {
+        viewModelScope.launch {
+            repo.deleteDiaryById(id)
+            refreshDiaries()
+        }
+    }
+}
+
 
 

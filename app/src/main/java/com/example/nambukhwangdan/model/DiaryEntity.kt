@@ -1,6 +1,7 @@
 
 package com.example.nambukhwangdan.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -18,7 +19,7 @@ data class DiaryEntity(
     val replyToId: String?,
     val createdAt: Long,
     val sendTime: Long?,
-    val liked: Boolean,
-    val nickname: String
+    val nickname: String,
+    @ColumnInfo(name = "liked") val liked: Boolean = false
 )
 

@@ -77,7 +77,7 @@ fun AnalyzeResultScreen(
         "부정" to Color(0xFFF44336)    // 빨강 (부정)
     )
     val pastLetters by viewModel.pastLetters.collectAsState()
-    val diary by viewModel.todayDiary.collectAsState()
+    val diary by viewModel.todayDiary.collectAsState(null)
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
     val replyToId by viewModel.replyToId.collectAsState()
@@ -181,22 +181,25 @@ fun AnalyzeResultScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) { replyLetter?.let { letter ->
                 // 오늘 일기 카드
-                    items(pastLetters.size) { index ->
-                        Column(
-                         modifier = Modifier
-                               .padding(horizontal = 20.dp)
-                                .shadow(4.dp, RoundedCornerShape(10.dp))
-                               .fillMaxWidth()
-                               .background(Surface, RoundedCornerShape(10.dp))
-                               .padding(horizontal = 20.dp, vertical = 10.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                        //오늘 일기 text 부분
-                            Text("오늘의 일기 미리보기", fontWeight = FontWeight.Bold)
-                            ExpandableDiaryCard(diary)
+                item {
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .shadow(4.dp, RoundedCornerShape(10.dp))
+                            .fillMaxWidth()
+                            .background(Surface, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("오늘의 일기 미리보기", fontWeight = FontWeight.Bold)
+                        if (diary != null) {
+                            ExpandableDiaryCard(diary!!)   // diary가 절대 null 아닐 때만 호출
+                        } else {
+                            Text("일기를 불러오는 중입니다...", color = Color.Gray)
                         }
                     }
                 }
+            }
 
                     // 감정 목록
                 item {
@@ -270,11 +273,15 @@ fun AnalyzeResultScreen(
         // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistDiary(
-                    content = diary,
-                    dateMillis = dateMillis
-                )
-                bottomNavController.navigate(Routes.Home)
+                if (diary != null) {
+                    viewModel.persistDiary(
+                        content = diary!!,
+                        dateMillis = dateMillis
+                    )
+                    bottomNavController.navigate(Routes.Home)
+                } else {
+                println("⚠ diary is null - 저장 안됨")
+            }
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -371,6 +378,8 @@ fun AnalyzeResultScreen(
         }
     }
 }
+
+
 
 @Composable
 fun EmotionCircleButton(
