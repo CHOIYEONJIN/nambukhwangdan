@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "617579564240",
+    "project_id": "nambukhwangdan",
+    "storage_bucket": "nambukhwangdan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:617579564240:android:a1607f7ad2e0cfe47b22d5",
+        "android_client_info": {
+          "package_name": "com.example.nambukhwangdan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "617579564240-7k7cdomk05deuet9g2jn4h3250f7ovj9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nambukhwangdan",
+            "certificate_hash": "a715bd647f0a0c41b7b3fc6f87306c49334fefec"
+          }
+        },
+        {
+          "client_id": "617579564240-mhh9nje51hqvaa666f2gjb1i1vt7vnma.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfgKIiQ14W4yfkiPUuZdJrNIuh_G13UbY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "617579564240-mhh9nje51hqvaa666f2gjb1i1vt7vnma.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
