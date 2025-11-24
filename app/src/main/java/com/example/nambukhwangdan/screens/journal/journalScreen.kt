@@ -47,7 +47,6 @@ import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -67,7 +66,7 @@ fun JournalScreen(
     ) {
         HeaderSection(onWriteDiary = onWriteDiary)
         Spacer(modifier = Modifier.height(12.dp))
-        DateHeader()
+        DateHeader(referenceDateMillis = diaries.firstOrNull()?.date)
         Spacer(modifier = Modifier.height(12.dp))
         TimelineList(entries = diaries)
     }
@@ -115,10 +114,12 @@ private fun HeaderSection(onWriteDiary: () -> Unit) {
 }
 
 @Composable
-private fun DateHeader() {
-    val today = LocalDate.now()
+private fun DateHeader(referenceDateMillis: Long?) {
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.KOREAN)
     val detailFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd EEE", Locale.KOREAN)
+    val date = Instant.ofEpochMilli(referenceDateMillis ?: System.currentTimeMillis())
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -127,15 +128,15 @@ private fun DateHeader() {
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                text = today.dayOfMonth.toString(),
+                text = date.dayOfMonth.toString(),
                 fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = monthFormatter.format(today), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = detailFormatter.format(today), color = Color.DarkGray)
+                Text(text = monthFormatter.format(date), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = detailFormatter.format(date), color = Color.DarkGray)
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -151,7 +152,7 @@ private fun DateHeader() {
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
                     .clickable { /* TODO: 정렬 옵션 */ }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(text = "시간순", fontWeight = FontWeight.Medium, color = Color.Black)
             }
@@ -165,7 +166,7 @@ private fun TimelineList(entries: List<Diary>) {
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        itemsIndexed(entries) { index, entry ->
+        itemsIndexed(entries.sortedByDescending(Diary::date)) { index, entry ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 TimelineIndicator(
                     isFirst = index == 0,
@@ -222,7 +223,7 @@ private fun JournalCard(entry: Diary) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = formatDayLabel(entry.date),
+                    text = entry.dayLabel(),
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF6B6B6B)
                 )
@@ -242,7 +243,7 @@ private fun JournalCard(entry: Diary) {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = formatDetailDate(entry.date),
+                text = entry.detailLabel(),
                 color = Color(0xFF8D8D8D),
                 fontSize = 12.sp
             )
@@ -250,8 +251,8 @@ private fun JournalCard(entry: Diary) {
     }
 }
 
-private fun formatDayLabel(dateMillis: Long): String {
-    val date = LocalDate.ofInstant(Instant.ofEpochMilli(dateMillis), ZoneId.systemDefault())
+private fun Diary.dayLabel(): String {
+    val date = Instant.ofEpochMilli(date).atZone(ZoneId.systemDefault()).toLocalDate()
     val dayOfWeek = when (date.dayOfWeek.value) {
         1 -> "월"
         2 -> "화"
@@ -264,7 +265,7 @@ private fun formatDayLabel(dateMillis: Long): String {
     return "${date.dayOfMonth} $dayOfWeek"
 }
 
-private fun formatDetailDate(dateMillis: Long): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd EEE", Locale.KOREAN)
-    return formatter.format(Instant.ofEpochMilli(dateMillis).atZone(ZoneId.systemDefault()))
+private fun Diary.detailLabel(): String {
+    return DateTimeFormatter.ofPattern("yyyy.MM.dd EEE", Locale.KOREAN)
+        .format(Instant.ofEpochMilli(date).atZone(ZoneId.systemDefault()))
 }
