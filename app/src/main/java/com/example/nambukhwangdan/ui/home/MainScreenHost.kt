@@ -51,9 +51,7 @@ fun MainScreenHost(
             // 일기 탭
             composable(Routes.Journal) {
                 JournalScreen(
-                    onWriteDiary = {
-                        appNavController.navigate(Routes.DiaryWrite)   // 👈 이것도 AppNav로 이동
-                    }
+                    viewModel = diaryViewModel
                 )
             }
 

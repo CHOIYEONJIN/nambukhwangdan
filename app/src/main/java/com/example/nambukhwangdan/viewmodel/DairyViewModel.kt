@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.data.repository.DiaryRepository
 import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.toDiary
 import com.example.nambukhwangdan.model.toEntity
 import com.example.nambukhwangdan.navigation.Routes
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,8 +17,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.YearMonth
 import java.util.UUID
 import javax.inject.Inject
 
@@ -152,7 +158,30 @@ class DiaryViewModel @Inject constructor(
     }
     // --- Repository를 사용하는 로직 (기존 두 번째 ViewModel의 내용) ---
     val allDiaries = repo.getAllDiaries()
+        .map { diaries -> diaries.map { it.toDiary() } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private val _displayMonth = MutableStateFlow(YearMonth.now())
+    val displayMonth = _displayMonth.asStateFlow()
+
+    val diariesForMonth = combine(allDiaries, displayMonth) { diaries, month ->
+        diaries.filter { diary ->
+            val diaryMonth = YearMonth.from(
+                Instant.ofEpochMilli(diary.date)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+            )
+            diaryMonth == month
+        }.sortedByDescending { it.date }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun moveToPreviousMonth() {
+        _displayMonth.value = _displayMonth.value.minusMonths(1)
+    }
+
+    fun moveToNextMonth() {
+        _displayMonth.value = _displayMonth.value.plusMonths(1)
+    }
 
     fun saveDiary(diary: Diary) {
         viewModelScope.launch {
