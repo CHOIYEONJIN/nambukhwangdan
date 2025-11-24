@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.data.repository.DiaryRepository
 import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.toDiary
 import com.example.nambukhwangdan.model.toEntity
 import com.example.nambukhwangdan.navigation.Routes
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -152,6 +154,7 @@ class DiaryViewModel @Inject constructor(
     }
     // --- Repository를 사용하는 로직 (기존 두 번째 ViewModel의 내용) ---
     val allDiaries = repo.getAllDiaries()
+        .map { diaries -> diaries.map { it.toDiary() } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun saveDiary(diary: Diary) {

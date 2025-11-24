@@ -31,7 +31,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,47 +41,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nambukhwangdan.model.Diary
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
-
-private data class JournalEntry(
-    val dayLabel: String,
-    val detailDate: String,
-    val summary: String,
-    val isFavorite: Boolean
-)
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
-fun JournalScreen(onWriteDiary: () -> Unit) {
-    val entries = remember {
-        listOf(
-            JournalEntry(
-                dayLabel = "28 화",
-                detailDate = "2024.10.28 Tue",
-                summary = "오늘의 일기 내용중 일부가 이곳에 뜨는 중입니다.\n오늘의 일기 내용중 일부가 이곳에 뜨는 중입니다.",
-                isFavorite = true
-            ),
-            JournalEntry(
-                dayLabel = "27 월",
-                detailDate = "2024.10.27 Mon",
-                summary = "오늘의 일기 내용중 일부가 이곳에 뜨는 중입니다.",
-                isFavorite = false
-            ),
-            JournalEntry(
-                dayLabel = "26 일",
-                detailDate = "2024.10.26 Sun",
-                summary = "오늘의 일기 내용중 일부가 이곳에 뜨는 중입니다.",
-                isFavorite = false
-            ),
-            JournalEntry(
-                dayLabel = "25 토",
-                detailDate = "2024.10.25 Sat",
-                summary = "오늘의 일기 내용중 일부가 이곳에 뜨는 중입니다.",
-                isFavorite = false
-            )
-        )
-    }
+fun JournalScreen(
+    viewModel: DiaryViewModel,
+    onWriteDiary: () -> Unit
+) {
+    val diaries by viewModel.allDiaries.collectAsState()
 
     Column(
         modifier = Modifier
@@ -92,7 +69,7 @@ fun JournalScreen(onWriteDiary: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         DateHeader()
         Spacer(modifier = Modifier.height(12.dp))
-        TimelineList(entries = entries)
+        TimelineList(entries = diaries)
     }
 }
 
@@ -139,6 +116,10 @@ private fun HeaderSection(onWriteDiary: () -> Unit) {
 
 @Composable
 private fun DateHeader() {
+    val today = LocalDate.now()
+    val monthFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.KOREAN)
+    val detailFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd EEE", Locale.KOREAN)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -146,15 +127,15 @@ private fun DateHeader() {
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                text = "10",
+                text = today.dayOfMonth.toString(),
                 fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = "October", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = "2024.10.21 월", color = Color.DarkGray)
+                Text(text = monthFormatter.format(today), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = detailFormatter.format(today), color = Color.DarkGray)
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -179,7 +160,7 @@ private fun DateHeader() {
 }
 
 @Composable
-private fun TimelineList(entries: List<JournalEntry>) {
+private fun TimelineList(entries: List<Diary>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -226,7 +207,7 @@ private fun TimelineIndicator(isFirst: Boolean, isLast: Boolean) {
 }
 
 @Composable
-private fun JournalCard(entry: JournalEntry) {
+private fun JournalCard(entry: Diary) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -241,19 +222,19 @@ private fun JournalCard(entry: JournalEntry) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = entry.dayLabel,
+                    text = formatDayLabel(entry.date),
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF6B6B6B)
                 )
                 Icon(
-                    imageVector = if (entry.isFavorite) Icons.Rounded.Favorite else Icons.Outlined.BookmarkBorder,
+                    imageVector = if (entry.liked) Icons.Rounded.Favorite else Icons.Outlined.BookmarkBorder,
                     contentDescription = null,
-                    tint = if (entry.isFavorite) Primary else Color(0xFF6B6B6B)
+                    tint = if (entry.liked) Primary else Color(0xFF6B6B6B)
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = entry.summary,
+                text = entry.content,
                 color = Color.Black,
                 fontSize = 14.sp,
                 maxLines = 3,
@@ -261,10 +242,29 @@ private fun JournalCard(entry: JournalEntry) {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = entry.detailDate,
+                text = formatDetailDate(entry.date),
                 color = Color(0xFF8D8D8D),
                 fontSize = 12.sp
             )
         }
     }
+}
+
+private fun formatDayLabel(dateMillis: Long): String {
+    val date = LocalDate.ofInstant(Instant.ofEpochMilli(dateMillis), ZoneId.systemDefault())
+    val dayOfWeek = when (date.dayOfWeek.value) {
+        1 -> "월"
+        2 -> "화"
+        3 -> "수"
+        4 -> "목"
+        5 -> "금"
+        6 -> "토"
+        else -> "일"
+    }
+    return "${date.dayOfMonth} $dayOfWeek"
+}
+
+private fun formatDetailDate(dateMillis: Long): String {
+    val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd EEE", Locale.KOREAN)
+    return formatter.format(Instant.ofEpochMilli(dateMillis).atZone(ZoneId.systemDefault()))
 }
