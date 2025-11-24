@@ -54,8 +54,7 @@ fun MainScreenHost(
             // 일기 탭
             composable(Routes.Journal) {
                 JournalScreen(
-                    viewModel = diaryViewModel,
-                    navController = bottomNavController
+                    viewModel = diaryViewModel
                 )
             }
 

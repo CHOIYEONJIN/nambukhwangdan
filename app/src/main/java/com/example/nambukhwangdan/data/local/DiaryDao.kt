@@ -23,4 +23,12 @@ interface DiaryDao {
 
     @Delete
     suspend fun deleteDiary(diary: DiaryEntity)
+    @Query("UPDATE diary_table SET liked = NOT liked WHERE id = :id")
+    suspend fun toggleLike(id: String)
+
+    @Query("SELECT * FROM diary_table")
+    suspend fun getAllDiariesOnce(): List<DiaryEntity>
+
+    @Query("DELETE FROM diary_table WHERE id = :id")
+    suspend fun deleteDiaryById(id: String)
 }
