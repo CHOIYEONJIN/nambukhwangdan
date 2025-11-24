@@ -17,6 +17,7 @@ import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
 import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
 import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
+import com.example.nambukhwangdan.screens.inbox.InboxScreen
 import com.example.nambukhwangdan.screens.journal.JournalScreen
 import com.example.nambukhwangdan.screens.letters.NewLetterScreen
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
@@ -85,9 +86,14 @@ fun MainScreenHost(
                     bottomNavController=bottomNavController
                 )
             }
+            composable(Routes.Inbox) {
+                InboxScreen(
+                    viewModel = diaryViewModel
+                )
+            }
 
             // 더미 화면
-            composable(Routes.Inbox) { DummyScreen("편지함") }
+
             composable(Routes.Settings) { DummyScreen("내 정보") }
         }
     }
