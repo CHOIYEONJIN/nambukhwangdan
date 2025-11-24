@@ -2,7 +2,6 @@ package com.example.nambukhwangdan.screens.journal
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,10 +19,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -49,14 +47,16 @@ import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.time.YearMonth
 import java.util.Locale
 
 @Composable
 fun JournalScreen(
-    viewModel: DiaryViewModel,
-    onWriteDiary: () -> Unit
+    viewModel: DiaryViewModel
 ) {
-    val diaries by viewModel.allDiaries.collectAsState()
+    val diaries by viewModel.diariesForMonth.collectAsState()
+    val displayMonth by viewModel.displayMonth.collectAsState()
 
     Column(
         modifier = Modifier
@@ -64,16 +64,25 @@ fun JournalScreen(
             .background(Background)
             .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
-        HeaderSection(onWriteDiary = onWriteDiary)
+        HeaderSection()
         Spacer(modifier = Modifier.height(12.dp))
-        DateHeader(referenceDateMillis = diaries.firstOrNull()?.date)
+        DateHeader(
+            displayMonth = displayMonth,
+            diaryCount = diaries.size,
+            onPreviousMonth = viewModel::moveToPreviousMonth,
+            onNextMonth = viewModel::moveToNextMonth
+        )
         Spacer(modifier = Modifier.height(12.dp))
-        TimelineList(entries = diaries)
+        if (diaries.isEmpty()) {
+            EmptyState(displayMonth)
+        } else {
+            TimelineList(entries = diaries)
+        }
     }
 }
 
 @Composable
-private fun HeaderSection(onWriteDiary: () -> Unit) {
+private fun HeaderSection() {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -103,59 +112,62 @@ private fun HeaderSection(onWriteDiary: () -> Unit) {
                 )
             }
         }
-        Button(
-            onClick = onWriteDiary,
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-        ) {
-            Text("일기 쓰기", color = Color.White, fontWeight = FontWeight.SemiBold)
-        }
     }
 }
 
 @Composable
-private fun DateHeader(referenceDateMillis: Long?) {
-    val monthFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.KOREAN)
-    val detailFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd EEE", Locale.KOREAN)
-    val date = Instant.ofEpochMilli(referenceDateMillis ?: System.currentTimeMillis())
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
+private fun DateHeader(
+    displayMonth: YearMonth,
+    diaryCount: Int,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    val monthLabelFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
+    val rangeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd (EEE)", Locale.KOREAN)
+    val start = displayMonth.atDay(1)
+    val end = displayMonth.atEndOfMonth()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = date.dayOfMonth.toString(),
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(text = monthFormatter.format(date), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = detailFormatter.format(date), color = Color.DarkGray)
-            }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { /* TODO: 날짜 선택 기능 */ }) {
-                Icon(
-                    imageVector = Icons.Outlined.CalendarMonth,
-                    contentDescription = "달력",
-                    tint = Color.Black
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onPreviousMonth) {
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowLeft,
+                        contentDescription = "이전 달",
+                        tint = Color.Black
+                    )
+                }
+                Text(
+                    text = monthLabelFormatter.format(displayMonth),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
+                IconButton(onClick = onNextMonth) {
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowRight,
+                        contentDescription = "다음 달",
+                        tint = Color.Black
+                    )
+                }
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White)
-                    .clickable { /* TODO: 정렬 옵션 */ }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            ) {
-                Text(text = "시간순", fontWeight = FontWeight.Medium, color = Color.Black)
-            }
+            Text(
+                text = "${rangeFormatter.format(start)} ~ ${rangeFormatter.format(end)}", 
+                color = Color(0xFF6B6B6B),
+                fontSize = 12.sp
+            )
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.White)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+        ) {
+            Text(text = "${diaryCount}개의 기록", fontWeight = FontWeight.Medium, color = Color.Black)
         }
     }
 }
@@ -176,6 +188,20 @@ private fun TimelineList(entries: List<Diary>) {
                 JournalCard(entry = entry)
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyState(displayMonth: YearMonth) {
+    val monthLabel = displayMonth.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "${monthLabel}에는 기록이 없어요", color = Color.DarkGray)
+        Text(text = "달력을 넘겨 다른 달의 기록을 확인해 보세요", color = Color.DarkGray, fontSize = 13.sp)
     }
 }
 
@@ -222,11 +248,18 @@ private fun JournalCard(entry: Diary) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = entry.dayLabel(),
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF6B6B6B)
-                )
+                Column {
+                    Text(
+                        text = entry.dayLabel(),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF6B6B6B)
+                    )
+                    Text(
+                        text = entry.detailLabel(),
+                        color = Color(0xFF8D8D8D),
+                        fontSize = 12.sp
+                    )
+                }
                 Icon(
                     imageVector = if (entry.liked) Icons.Rounded.Favorite else Icons.Outlined.BookmarkBorder,
                     contentDescription = null,
@@ -238,15 +271,20 @@ private fun JournalCard(entry: Diary) {
                 text = entry.content,
                 color = Color.Black,
                 fontSize = 14.sp,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = entry.detailLabel(),
-                color = Color(0xFF8D8D8D),
-                fontSize = 12.sp
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+            entry.sticker?.takeIf { it.isNotBlank() }?.let { sticker ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Primary.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(text = sticker, color = Primary, fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                }
+            }
         }
     }
 }
