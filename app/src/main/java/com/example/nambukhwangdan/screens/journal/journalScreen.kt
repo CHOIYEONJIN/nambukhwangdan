@@ -1,12 +1,12 @@
 package com.example.nambukhwangdan.screens.journal
 
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
 @Composable
-fun JournalScreen(onWriteDiary: () -> Unit) {
-    Button(onClick = onWriteDiary) {
-        Text("일기 쓰기")
-    }
+fun JournalScreen(viewModel: DiaryViewModel,
+                  navController: NavController) {
+
+
 }

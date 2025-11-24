@@ -1,6 +1,8 @@
 package com.example.nambukhwangdan.navigation
 
 // TODO: 실제 Onboarding/Login 화면 import
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -12,6 +14,7 @@ import com.example.nambukhwangdan.ui.onboarding.OnboardingIntroScreen
 import com.example.nambukhwangdan.ui.onboarding.OnboardingNicknameScreen
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
