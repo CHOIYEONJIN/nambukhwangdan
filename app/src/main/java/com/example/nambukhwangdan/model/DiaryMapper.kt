@@ -17,3 +17,21 @@ fun Diary.toEntity(): DiaryEntity {
         nickname = this.nickname
     )
 }
+
+fun DiaryEntity.toDiary(): Diary {
+    return Diary(
+        id = this.id,
+        photoUrls = this.photoUrls,
+        content = this.content,
+        analyzedAt = this.analyzedAt,
+        emotion = this.emotion,
+        sticker = this.sticker,
+        date = this.date,
+        sendToFuture = this.sendToFuture,
+        replyToId = this.replyToId,
+        createdAt = this.createdAt,
+        sendTime = this.sendTime,
+        liked = this.liked,
+        nickname = this.nickname
+    )
+}
