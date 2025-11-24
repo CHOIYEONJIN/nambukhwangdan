@@ -1,5 +1,7 @@
 package com.example.nambukhwangdan.ui.home
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,6 +23,7 @@ import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
 // TODO: 나머지 탭 화면 (Journal, Inbox, Settings)은 더미 파일 사용
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainScreenHost(
     appNavController: NavController,      // 👈 AppNavHost에서 전달받는 NavController
