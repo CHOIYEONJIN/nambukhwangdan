@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,15 +35,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Surface
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun EmotionCalendarScreen() {
+fun EmotionCalendarScreen(viewModel: DiaryViewModel) {
 
     var currentDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(currentDate) }
+    val diaries by viewModel.allDiaries.collectAsState()
+    val selectedDiaries = diaries.filter { diary ->
+        Instant.ofEpochMilli(diary.date)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate() == selectedDate
+    }
     val calendarDates = getCalendarDates(currentDate.year, currentDate.monthValue)
     Box(
         modifier = Modifier
@@ -58,7 +69,9 @@ fun EmotionCalendarScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("◀", modifier = Modifier
-                .clickable { currentDate = currentDate.minusMonths(1) }
+                .clickable {
+                    currentDate = currentDate.minusMonths(1)
+                }
                 .padding(10.dp),
                 color=Color.Gray)
             Text(
@@ -67,7 +80,9 @@ fun EmotionCalendarScreen() {
                 color=Color.Gray
             )
             Text("▶", modifier = Modifier
-                .clickable { currentDate = currentDate.plusMonths(1) }
+                .clickable {
+                    currentDate = currentDate.plusMonths(1)
+                }
                 .padding(10.dp),
                 color=Color.Gray)
         }
@@ -115,8 +130,10 @@ fun EmotionCalendarScreen() {
                                 )
                                 .clickable {
                                     if (!isThisMonth) {   // ◀ 이전 / ▶ 다음 달 이동
-                                        currentDate = date.withDayOfMonth(1) }
-                                               },
+                                        currentDate = date.withDayOfMonth(1)
+                                    }
+                                    selectedDate = date
+                                },
                             contentAlignment = Alignment.Center
                         ){}
                         Text(
@@ -126,6 +143,24 @@ fun EmotionCalendarScreen() {
                         )
                         }
                     }
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        LazyColumn {
+            items(selectedDiaries) { diary ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .background(color = Surface, shape = RoundedCornerShape(8.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = diary.content,
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
                 }
             }
         }

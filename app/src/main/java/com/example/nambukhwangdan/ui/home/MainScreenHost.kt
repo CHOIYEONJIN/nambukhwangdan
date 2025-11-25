@@ -50,7 +50,7 @@ fun MainScreenHost(
             }
 
             // 감정 캘린더
-            composable(Routes.Calendar) { EmotionCalendarScreen() }
+            composable(Routes.Calendar) { EmotionCalendarScreen(viewModel = diaryViewModel) }
 
             // 일기 탭
             composable(Routes.Journal) {
