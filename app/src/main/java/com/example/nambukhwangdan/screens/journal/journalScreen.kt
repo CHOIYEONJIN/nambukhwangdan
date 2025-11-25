@@ -319,7 +319,8 @@ private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
                 diary = diary,
                 pretendard = pretendard,
                 isExpanded = expanded,
-                onToggle = { id -> viewModel.toggleLike(id)},
+                onLiked ={ id -> viewModel.toggleLike(id)},
+                onToggle = {expanded=!expanded},
                 onDelete = { id -> viewModel.deleteDiary(id) }
             )
         }
@@ -328,7 +329,7 @@ private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggle: (String) -> Unit, onDelete: (String) -> Unit) {
+fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked:(String) -> Unit, onToggle: () -> Unit, onDelete: (String) -> Unit) {
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
@@ -341,7 +342,7 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggl
             .fillMaxWidth()
             .heightIn(min = if (isExpanded) 0.dp else collapsedHeight)
             .animateContentSize(animationSpec = tween(300))
-            .clickable { onToggle(diary.id) },
+            .clickable { onToggle() },
 
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -434,7 +435,7 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggl
                     tint = if (isLiked) Primary else Grey,
                     modifier = Modifier
                         .size(20.dp)
-                        .clickable { onToggle(diary.id)}
+                        .clickable { onLiked(diary.id)}
                 )
 
                 Spacer(modifier = Modifier.width(20.dp))
