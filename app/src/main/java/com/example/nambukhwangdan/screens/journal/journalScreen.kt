@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -27,8 +27,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -42,9 +43,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,9 +54,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
 import com.example.nambukhwangdan.model.Diary
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
@@ -63,11 +64,11 @@ import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
-import java.time.LocalDate
+
 // 폰트 임시 지정 (실제 폰트 경로에 맞게 수정 필요)
 val pretendard = FontFamily.Default
 
@@ -80,7 +81,8 @@ fun JournalScreen(
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedSortOption by remember { mutableStateOf(SortOption.TIME_DESC) }
 
-    val diaries by viewModel.allDiaries.collectAsState()
+    val diaries by viewModel.allDiaries.collectAsState(initial = emptyList<Diary>())
+
 
     val filteredDiaries = remember(diaries, selectedDate, selectedSortOption) {
         val monthlyFiltered = diaries.filter { diary ->
@@ -317,7 +319,8 @@ private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
                 diary = diary,
                 pretendard = pretendard,
                 isExpanded = expanded,
-                onToggle = { expanded = !expanded }
+                onToggle = { id -> viewModel.toggleLike(id)},
+                onDelete = { id -> viewModel.deleteDiary(id) }
             )
         }
     }
@@ -325,7 +328,7 @@ private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggle: () -> Unit) {
+fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggle: (String) -> Unit, onDelete: (String) -> Unit) {
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
@@ -338,7 +341,7 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggl
             .fillMaxWidth()
             .heightIn(min = if (isExpanded) 0.dp else collapsedHeight)
             .animateContentSize(animationSpec = tween(300))
-            .clickable { onToggle() },
+            .clickable { onToggle(diary.id) },
 
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -431,7 +434,7 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggl
                     tint = if (isLiked) Primary else Grey,
                     modifier = Modifier
                         .size(20.dp)
-                        .clickable { /* 다이어리뷰모델에 추가해야함 */ }
+                        .clickable { onToggle(diary.id)}
                 )
 
                 Spacer(modifier = Modifier.width(20.dp))
@@ -447,11 +450,20 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onToggl
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "⭐️ 일기 상세 내용 추가 UI 영역 (ID: ${diary.id})",
-                        fontFamily = pretendard,
-                        fontSize = 14.sp
-                    )
+                    Column(){
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "delete diary",
+                            modifier = Modifier.clickable { onDelete(diary.id) },
+                            tint = Color(0xFFB00020) // 오류/삭제 계열 색상
+                        )
+                        Text(
+                            "⭐️ 일기 상세 내용 추가 UI 영역 (ID: ${diary.id})",
+                            fontFamily = pretendard,
+                            fontSize = 14.sp
+                        )
+                    }
+
                 }
             }
         }

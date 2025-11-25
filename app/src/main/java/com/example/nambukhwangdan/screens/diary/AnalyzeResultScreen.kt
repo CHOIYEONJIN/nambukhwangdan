@@ -274,7 +274,7 @@ fun AnalyzeResultScreen(
                     content = diary,
                     dateMillis = dateMillis
                 )
-                bottomNavController.navigate(Routes.Home)
+                bottomNavController.navigate(Routes.LetterToTomorrow)
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -285,7 +285,7 @@ fun AnalyzeResultScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
         ) {
             Text(
-                "완료하기",
+                "다음으로",
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp

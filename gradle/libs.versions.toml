@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.0"
+agp = "8.13.1"
 kotlin = "2.2.20"
 ksp="2.3.0"
 coreKtx = "1.17.0"
@@ -35,6 +35,7 @@ firebaseBom = "34.5.0"
 # Credentials & Google SignIn
 credentials = "1.5.0"
 googleId = "1.1.1"
+foundationLayout = "1.9.5"
 
 
 [libraries]
@@ -86,6 +87,7 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 # Google Identity (for Credential Manager)
 google-identity-googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
+androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
