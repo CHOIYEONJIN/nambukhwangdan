@@ -147,6 +147,13 @@ fun AnalyzeResultScreen(
 
                 // 인디케이터
                 Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    Box(
+                        Modifier
+                            .padding(5.dp)
+                            .size(10.dp)
+                            .background(color = Color.White, shape = CircleShape)
+                    )
                     Box(
                         Modifier
                             .padding(5.dp)
@@ -156,12 +163,6 @@ fun AnalyzeResultScreen(
                                 color = Variables.Color5,
                                 shape = RoundedCornerShape(999.dp)
                             )
-                    )
-                    Box(
-                        Modifier
-                            .padding(5.dp)
-                            .size(10.dp)
-                            .background(color = Color.White, shape = CircleShape)
                     )
                     Box(
                         Modifier
