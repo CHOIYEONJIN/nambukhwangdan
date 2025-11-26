@@ -42,6 +42,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +60,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.nambukhwangdan.screens.letters.ExpandableDiaryCard
+import com.example.nambukhwangdan.screens.letters.formatDate
+import com.example.nambukhwangdan.ui.theme.Background
+import com.example.nambukhwangdan.ui.theme.Primary
+import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
@@ -70,8 +76,9 @@ import java.util.Locale
 @Composable
 fun DiaryWriteScreen(
     viewModel: DiaryViewModel,
-    navController: NavController
+    bottomNavController: NavController
 ) {
+
     val pastLetters by viewModel.pastLetters.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
@@ -100,11 +107,19 @@ fun DiaryWriteScreen(
             viewModel.setSelectedUris(uris)
         }
     )
+    LaunchedEffect(Unit) {
+        viewModel.updateDiary("")   // 항상 입력 칸은 빈칸
+    }
+    val replyToId by viewModel.replyToId.collectAsState()
+
+// pastLetters 중 replyToId와 동일한 id를 가진 것만 필터링
+    val replyLetter = pastLetters.find { it.id == replyToId }
+
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Variables.Color4)
+            .background(color = Background)
     ) {
         // 🔹 메인 컨텐츠
         Column(
@@ -166,23 +181,24 @@ fun DiaryWriteScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 과거 일기 카드
-                items(pastLetters.size) { index ->
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        //과거 일기 text 부분
-                        Text(
-                            "${formatDate(pastLetters[index].createdAt)}의 ${pastLetters[index].nickname}에게서 온 편지",
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        ExpandableDiaryCard(pastLetters[index].content)
+                // 특정 편지 하나만 보여주기
+                replyLetter?.let { letter ->
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp)
+                                .shadow(4.dp, RoundedCornerShape(10.dp))
+                                .fillMaxWidth()
+                                .background(Surface, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "${formatDate(letter.createdAt)}의 ${letter.nickname}에게서 온 편지",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            ExpandableDiaryCard(letter.content)
+                        }
                     }
                 }
 
@@ -194,7 +210,7 @@ fun DiaryWriteScreen(
                             .padding(horizontal = 30.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
                             .fillMaxWidth()
-                            .background(Variables.Color6, RoundedCornerShape(10.dp))
+                            .background(Surface, RoundedCornerShape(10.dp))
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -203,7 +219,7 @@ fun DiaryWriteScreen(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Variables.Color6)
+                                .background(Surface)
                                 .border(1.dp, Variables.Color5, CircleShape)
                                 .clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
                             contentAlignment = Alignment.Center
@@ -246,15 +262,15 @@ fun DiaryWriteScreen(
                                 .wrapContentHeight()
                                 .animateContentSize(),
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Variables.Color6,
-                                unfocusedContainerColor = Variables.Color6,
+                                focusedContainerColor = Surface,
+                                unfocusedContainerColor = Surface,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = Variables.Color4,
+                                cursorColor = Primary,
                                 focusedTextColor = Color.Black,
                                 unfocusedTextColor = Color.Black,
-                                focusedPlaceholderColor = Variables.Color4,
-                                unfocusedPlaceholderColor = Color.Black
+                                focusedPlaceholderColor = Background,
+                                unfocusedPlaceholderColor = Primary
                             )
                         )
                     }
@@ -264,7 +280,7 @@ fun DiaryWriteScreen(
 
         // 하단 버튼
         Button(
-            onClick = { navController.navigate("AnalyzeLoadingScreen") },
+            onClick = { viewModel.startAnalyze(bottomNavController) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)
@@ -274,6 +290,9 @@ fun DiaryWriteScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
         ) {
             Text("다음으로", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        }
+        if (viewModel.isAnalyzing) {
+            AnalyzeLoadingOverlay(bottomNavController)   // ← Overlay 컴포저블 호출
         }
 
         // 달력 팝업 구현 부분
@@ -287,7 +306,7 @@ fun DiaryWriteScreen(
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Variables.Color6),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
@@ -319,7 +338,7 @@ fun DiaryWriteScreen(
                             },
                             showModeToggle = false,
                             colors = DatePickerDefaults.colors(
-                                containerColor = Variables.Color6,
+                                containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black ,
                                 selectedDayContainerColor = Variables.Color5,
@@ -357,7 +376,6 @@ fun DiaryWriteScreen(
         }
     }
 }
-// LazyColumn안에 펼칠 수 있는 card 넣기 위한 함수
 @Composable
 fun ExpandableDiaryCard(content: String) {
     var expanded by remember { mutableStateOf(false) }
@@ -368,7 +386,7 @@ fun ExpandableDiaryCard(content: String) {
             .animateContentSize()
             .clickable { expanded = !expanded },
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Variables.Color6)
+        colors = CardDefaults.cardColors(containerColor = Surface)
 
     ) {
         Column(Modifier.padding(12.dp)) {
