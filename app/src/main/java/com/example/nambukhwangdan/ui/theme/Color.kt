@@ -18,6 +18,4 @@ object Variables {
 
     val Color4: Color = Color(0xFFDBE4ED)
     val Color5: Color = Color(0xFF6194D7)
-    val Color6: Color = Color(0xFFFFFAF1)
-
 }
