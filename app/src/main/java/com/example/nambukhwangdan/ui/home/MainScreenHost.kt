@@ -1,6 +1,5 @@
 package com.example.nambukhwangdan.ui.home
 
-import com.example.nambukhwangdan.ui.theme.*
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -25,12 +24,13 @@ import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
 import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
 import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
-import com.example.nambukhwangdan.screens.journal.JournalScreen
 import com.example.nambukhwangdan.screens.inbox.InboxScreen
+import com.example.nambukhwangdan.screens.journal.JournalScreen
 import com.example.nambukhwangdan.screens.letters.NewLetterScreen
-import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import com.example.nambukhwangdan.ui.settings.SettingsScreen
+import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
 // TODO: 나머지 탭 화면 (Journal, Inbox, Settings)은 더미 파일 사용
 
@@ -76,7 +76,7 @@ fun MainScreenHost(
             }
 
             // 감정 캘린더
-            composable(Routes.Calendar) { EmotionCalendarScreen() }
+            composable(Routes.Calendar) { EmotionCalendarScreen(viewModel = diaryViewModel) }
 
             // 일기 탭
             composable(Routes.Journal) {
