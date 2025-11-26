@@ -36,9 +36,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Surface
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -61,94 +61,114 @@ fun EmotionCalendarScreen(viewModel: DiaryViewModel) {
             .fillMaxSize()
             .background(color = Background)
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Spacer(Modifier.height(30.dp))
-        // ----------------- 상단 월 이동 -------------------
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Text("◀", modifier = Modifier
-                .clickable {
-                    currentDate = currentDate.minusMonths(1)
-                }
-                .padding(10.dp),
-                color=Color.Gray)
-            Text(
-                "${currentDate.monthValue} ${currentDate.month} ${currentDate.year}",
-                fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                color=Color.Gray
-            )
-            Text("▶", modifier = Modifier
-                .clickable {
-                    currentDate = currentDate.plusMonths(1)
-                }
-                .padding(10.dp),
-                color=Color.Gray)
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Column(modifier = Modifier
-            .padding(horizontal = 30.dp)
-            .fillMaxWidth()
-            .background(Surface, RoundedCornerShape(10.dp))
-            .padding(horizontal = 20.dp, vertical = 10.dp)){
-        // ----------------- 요일 헤더 -------------------
-            val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-            LazyVerticalGrid(columns = GridCells.Fixed(7), modifier = Modifier.fillMaxWidth().height(30.dp)) {
-                items(weekDays) { day ->
-                Text(
-                    text = day,
-                    fontSize = 12.sp,
+            item {
+                Spacer(Modifier.height(30.dp))
+                // ----------------- 상단 월 이동 -------------------
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    color = Color.Gray
-                ) }
-            }
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "◀",
+                        modifier = Modifier
+                            .clickable {
+                                currentDate = currentDate.minusMonths(1)
+                            }
+                            .padding(10.dp),
+                        color = Color.Gray
+                    )
+                    Text(
+                        "${currentDate.monthValue} ${currentDate.month} ${currentDate.year}",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    Text(
+                        "▶",
+                        modifier = Modifier
+                            .clickable {
+                                currentDate = currentDate.plusMonths(1)
+                            }
+                            .padding(10.dp),
+                        color = Color.Gray
+                    )
+                }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
 
-        // ----------------- 날짜 렌더링 -------------------
-            LazyVerticalGrid(columns = GridCells.Fixed(7), modifier = Modifier.fillMaxWidth()) {
-                items(calendarDates.size) { index ->
-                    val date = calendarDates[index]
-                    val isThisMonth = date.monthValue == currentDate.monthValue
-                    Column(horizontalAlignment = Alignment.CenterHorizontally){
-                    //감정 표시 원
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .padding(4.dp)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(
-                                    when {
-                                        isThisMonth -> Color.White  // 💡 이번 달
-                                        else -> Surface         // 🔹 이전/다음 달
-                                    }
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 30.dp)
+                        .fillMaxWidth()
+                        .background(Surface, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    // ----------------- 요일 헤더 -------------------
+                    val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(7),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(30.dp)
+                    ) {
+                        items(weekDays) { day ->
+                            Text(
+                                text = day,
+                                fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // ----------------- 날짜 렌더링 -------------------
+                    LazyVerticalGrid(columns = GridCells.Fixed(7), modifier = Modifier.fillMaxWidth()) {
+                        items(calendarDates.size) { index ->
+                            val date = calendarDates[index]
+                            val isThisMonth = date.monthValue == currentDate.monthValue
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                //감정 표시 원
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .padding(4.dp)
+                                        .shadow(2.dp, CircleShape)
+                                        .clip(CircleShape)
+                                        .background(
+                                            when {
+                                                isThisMonth -> Color.White  // 💡 이번 달
+                                                else -> Surface         // 🔹 이전/다음 달
+                                            }
+                                        )
+                                        .clickable {
+                                            if (!isThisMonth) {   // ◀ 이전 / ▶ 다음 달 이동
+                                                currentDate = date.withDayOfMonth(1)
+                                            }
+                                            selectedDate = date
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {}
+                                Text(
+                                    text = date.dayOfMonth.toString(),
+                                    color = if (isThisMonth) Color.Black else Color.Gray,
+                                    fontSize = 10.sp
                                 )
-                                .clickable {
-                                    if (!isThisMonth) {   // ◀ 이전 / ▶ 다음 달 이동
-                                        currentDate = date.withDayOfMonth(1)
-                                    }
-                                    selectedDate = date
-                                },
-                            contentAlignment = Alignment.Center
-                        ){}
-                        Text(
-                            text = date.dayOfMonth.toString(),
-                            color = if (isThisMonth) Color.Black else Color.Gray,
-                            fontSize = 10.sp
-                        )
+                            }
                         }
                     }
                 }
+
+                Spacer(Modifier.height(16.dp))
             }
-        }
-        Spacer(Modifier.height(16.dp))
-        LazyColumn {
             items(selectedDiaries) { diary ->
                 Column(
                     modifier = Modifier
