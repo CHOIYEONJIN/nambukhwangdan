@@ -15,9 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -131,7 +132,10 @@ fun EmotionCalendarScreen(viewModel: DiaryViewModel) {
                     Spacer(Modifier.height(8.dp))
 
                     // ----------------- 날짜 렌더링 -------------------
-                    LazyVerticalGrid(columns = GridCells.Fixed(7), modifier = Modifier.fillMaxWidth()) {
+                    LazyVerticalGrid(columns = GridCells.Fixed(7),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(330.dp)) {
                         items(calendarDates.size) { index ->
                             val date = calendarDates[index]
                             val isThisMonth = date.monthValue == currentDate.monthValue
