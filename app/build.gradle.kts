@@ -31,13 +31,18 @@ android {
             )
         }
     }
+
+    // ⭐ 정상 작동하는 최신 호환 JDK 설정 ⭐
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // ⭐ Kotlin 환경은 이렇게 설정 ⭐
     kotlinOptions {
         jvmTarget = "17"
     }
+
     buildFeatures {
         compose = true
     }
@@ -47,7 +52,7 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.coil.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
