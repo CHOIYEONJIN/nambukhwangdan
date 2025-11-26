@@ -8,7 +8,9 @@ junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.9.4"
 activityCompose = "1.11.0"
-composeBom = "2024.09.00"
+composeBom = "2025.11.00"
+navigationCompose = "2.9.6"
+coil = "2.7.0"
 
 #AndroidX
 lifecycle= "2.9.4" #viewModel 등 안정판
