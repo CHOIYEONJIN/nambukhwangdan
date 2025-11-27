@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nambukhwangdan.navigation.Routes
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -46,7 +47,6 @@ data class AuthState(
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     // Firebase Authentication 인스턴스
-    // ⚠️ private 키워드를 제거하여 SettingsScreen에서 접근할 수 있도록 변경했습니다.
     val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val dataStore = application.dataStore
 
@@ -55,16 +55,38 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val authState: StateFlow<AuthState> = _authState
 
     init {
-        // ViewModel이 생성될 때 초기 시작 화면을 결정하는 로직을 실행
+        // 1. 초기 시작 화면 결정
         determineStartDestination()
+
+        // 2. 🚀 Firebase 인증 상태 변화 리스너 등록 (1, 3번 문제 해결의 핵심)
+        // 로그인/로그아웃 이벤트가 발생할 때마다 이 리스너가 호출되어 상태를 업데이트합니다.
+        auth.addAuthStateListener { firebaseAuth ->
+            viewModelScope.launch {
+                updateAuthStateFromListener(firebaseAuth.currentUser)
+            }
+        }
+    }
+
+    /**
+     * 리스너를 통해 전달받은 Firebase 인증 정보를 바탕으로 AuthState를 업데이트합니다.
+     */
+    private suspend fun updateAuthStateFromListener(user: FirebaseUser?) {
+        val isLoggedIn = user != null
+        val savedNickname = getNickname()
+
+        // 리스너가 호출될 때는 startDestination을 바꾸지 않고,
+        // 닉네임과 로그인 상태만 실시간으로 업데이트합니다.
+        _authState.value = _authState.value.copy(
+            isLoggedIn = isLoggedIn,
+            currentNickname = savedNickname, // 닉네임 상태는 항상 로드 후 업데이트
+            isLoading = false // 리스너가 호출되었다는 것은 초기 로딩이 끝났음을 의미
+        )
     }
 
     /**
      * 앱을 시작할 때 최초로 보여줄 화면(Route)를 결정합니다.
-     * 1. 닉네임이 설정되었는지 확인 (로컬 DataStore)
-     * 2. Firebase에 로그인되어 있는지 확인 (Google Auth)
      */
-    fun determineStartDestination() { // public으로 변경하여 외부에서 강제 업데이트 가능하게 함
+    fun determineStartDestination() {
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true)
 
@@ -74,16 +96,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             // 2. Firebase 인증 상태 확인
             val isLoggedIn = auth.currentUser != null
 
-            // 3. 시작 경로 결정 (닉네임 설정 여부 대신 로그인 여부만 사용)
+            // 3. 시작 경로 결정 (1번 문제 해결: 로그인 상태만으로 판단)
             val destination = if (isLoggedIn) {
                 Routes.MainHost // 로그인 O -> 메인 화면으로
             } else {
                 Routes.OnboardingIntro // 로그인 X -> 온보딩 시작 화면으로
             }
 
+            // 4. 상태 업데이트
             _authState.value = _authState.value.copy(
                 isLoading = false,
-                currentNickname = savedNickname, // 닉네임 상태는 항상 로드 후 업데이트
+                currentNickname = savedNickname,
                 isLoggedIn = isLoggedIn,
                 startDestination = destination
             )
@@ -92,9 +115,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
 
     /**
-     * 사용자가 입력한 닉네임을 로컬 DataStore에 저장합니다.
-     * 닉네임은 서버에 저장되지 않고, 편지 전송 시 데이터에 포함됩니다.
-     * @param nickname 저장할 닉네임 문자열
+     * 사용자가 입력한 닉네임을 로컬 DataStore에 저장합니다. (2번 문제 해결)
      */
     fun saveNickname(nickname: String) {
         // 1. 상태를 '저장 중'으로 변경
@@ -111,7 +132,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 _authState.value = _authState.value.copy(
                     isSaving = false,
                     isNicknameSaved = true,
-                    currentNickname = nickname, // 👈 닉네임 즉시 업데이트 (2번 문제 해결)
+                    currentNickname = nickname,
                     saveError = null
                 )
 
@@ -136,12 +157,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 현재 사용자를 Firebase에서 로그아웃하고, 앱 상태를 업데이트합니다.
      */
-    fun signOut(onSignOutComplete: () -> Unit) { // 콜백 함수를 추가하여 화면 전환을 외부에서 제어
+    fun signOut(onSignOutComplete: () -> Unit) {
         auth.signOut()
 
-        // 로그아웃 후 상태를 즉시 업데이트하고 초기 화면을 재결정합니다.
-        // onSignOutComplete 콜백을 통해 AppNavHost에게 화면 전환을 알립니다.
-        determineStartDestination()
-        onSignOutComplete() // 콜백 실행
+        // 로그아웃이 완료되면 리스너가 자동으로 상태를 "isLoggedIn=false"로 업데이트합니다.
+        // 우리는 화면 전환만 요청합니다.
+        onSignOutComplete()
     }
 }

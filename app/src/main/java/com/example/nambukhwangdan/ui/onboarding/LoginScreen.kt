@@ -114,7 +114,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(Surface)
             .swipeBack(onBack = onBack), // 기존 Back 로직 유지
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

@@ -94,7 +94,7 @@ fun OnboardingNicknameScreen(
         modifier = Modifier
             .fillMaxSize()
             .swipeBack(onBack = onBack)
-            .background(Background),
+            .background(Surface),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
