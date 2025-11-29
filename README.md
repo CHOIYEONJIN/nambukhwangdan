@@ -62,7 +62,7 @@ Firestore 연결은 반드시 google-services.json + firebase init 필요.
 
 # 📌 3. 앞으로 구현해야 할 기능
 
-🚨 현재 부족한 부분 (중요)
+🚨 현재 부족한 부분 
 
 구현 필요 항목	현재 상태	필요성
 
