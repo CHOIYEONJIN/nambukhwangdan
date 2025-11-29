@@ -1,4 +1,6 @@
-📌 1. 현재까지 구현된 기능
+
+# 📌 1. 현재까지 구현된 기능
+
 🔷 앱 구조
 
 Jetpack Compose 기반 화면 구성
@@ -24,12 +26,18 @@ ViewModel에서 UI 상태 관리 흐름 OK
 
 🔷 주요 화면
 화면	역할	Firestore 관련 상태
+
 DiaryWriteScreen	일기 작성 & DB 저장	Firestore 저장 완료
+
 AnalyzeLoadingScreen	감정 분석 호출	성공
+
 AnalyzeResultScreen	감정 결과 표시	UI 반영만 진행됨
+
 EmotionCalendarScreen	글 목록 표시	Room 데이터만 사용
+
 InboxScreen, LetterToTomorrowScreen	편지 저장까지는 가능	Firestore 읽기 기능 없음
-📌 2. 팀원이 실행하기 위해 필요한 작업
+
+# 📌 2. 팀원이 실행하기 위해 필요한 작업
 🔧 반드시 필요한 것
 항목	설명
 google-services.json	각자 Firebase Console에서 다시 발급 → app/ 폴더에 직접 추가
@@ -52,11 +60,18 @@ firebase deploy --only functions
 ⚠ Room DB는 앱 내부 저장이므로 그대로 사용 가능.
 Firestore 연결은 반드시 google-services.json + firebase init 필요.
 
-📌 3. 앞으로 구현해야 할 기능
+# 📌 3. 앞으로 구현해야 할 기능
+
 🚨 현재 부족한 부분 (중요)
+
 구현 필요 항목	현재 상태	필요성
+
 Firestore → 앱으로 불러오기(Read)	❌ 없음	앱 재실행 시 글이 안불러와짐
+
 Firestore ↔ Room DB 동기화	❌ 없음	오프라인/온라인 모드 문제
+
 감정 분석 결과 UI 반영	🔶 부분완료	Firestore 저장은 OK, UI 연결 필요
+
 수정/삭제 Firestore 반영	❌ 없음	DB와 Firestore 불일치 가능
+
 EmotionCalendar + Firestore 연동	❌ 없음	감정 분석 UI와 연동해야 함
