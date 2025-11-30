@@ -15,5 +15,8 @@ data class DiaryEntity(
     val createdAt: Long,
     val liked: Boolean,
     val nickname: String,
-    val userId:String
+    val userId: String,
+    val updatedAt: Long,
+    val sentimentLabel: String?,
+    val sentimentScore: Float?
 )

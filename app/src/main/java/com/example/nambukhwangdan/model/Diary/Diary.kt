@@ -1,8 +1,10 @@
 package com.example.nambukhwangdan.model.Diary
 
+import com.google.firebase.firestore.PropertyName
+
 data class Diary(
-    val id: String="",
-    val content: String="",
+    val id: String = "",
+    val content: String = "",
     val emotion: String = "",          // 감정 분석 결과
     val sticker: String? = null,       // 선택 스티커
     val analyzedAt: Long? = null,      // 분석 완료 시점
@@ -12,5 +14,12 @@ data class Diary(
     val liked: Boolean = false,        // 북마크 기능
     val photoUrls: List<String> = emptyList(),
     val nickname: String = "나",
-    val userId:String=""
+    val userId: String = "",
+    val updatedAt: Long = System.currentTimeMillis(),
+    @get:PropertyName("sentiment")
+    @set:PropertyName("sentiment")
+    var sentimentLabel: String? = null,
+    @get:PropertyName("score")
+    @set:PropertyName("score")
+    var sentimentScore: Float? = null
 )
