@@ -1,87 +1,102 @@
+# 📌 앱 개발 진행 상황 (Diary & Emotion Project)
 
-# 📌 1. 현재까지 구현된 기능
+## 📌 1. 현재까지 구현된 기능
 
-## 🔷 앱 구조
+### 🏗 아키텍처 & 기술 스택
 
-Jetpack Compose 기반 화면 구성
+| 기술 | 구현 상태 |
+|------|------------|
+| Jetpack Compose UI | ✔ 전체화면 구현 |
+| MVVM + Repository | ✔ 상태 관리 및 데이터 흐름 |
+| Hilt DI | ✔ 의존성 주입 완료 |
+| Room DB | ✔ Diary / Letter 저장 & 조회 |
+| Firestore | ✔ 저장(set()) 가능 |
+| Firebase Functions | ✔ 호출 성공 |
+| HuggingFace API (Secret 방식) | ✔ 연동 완료 |
+| Mapper 구조 | ✔ Domain ↔ Entity 변환 완료 |
+| ViewModel | ✔ UI State & 비즈니스 로직 처리 |
 
-Room DB 사용 → Diary 저장 / 불러오기
+---
 
-Firestore 사용 → Diary 저장 (set().await()) 정상 작동
+### 🔄 데이터 흐름 (현재 정상 동작)
 
-Firebase Functions + HuggingFace API 감정 분석 기능 완료
+    [사용자 입력]
+        ↓
+    Compose UI
+        ↓
+    ViewModel (상태 관리)
+        ↓
+    Room DB 저장 (local)
+        ↓
+    Firestore 저장 (remote)
+        ↓
+    Firebase Functions → 감정 분석 호출
+        ↓
+    Firestore sentiment 업데이트 완료
 
-Hilt 기반 의존성 주입 구조 완료
+✔ **이 전 과정은 실제 기기에서 기능 체크 완료됨**
 
-Diary / Letter 도메인 모델, Mapper, Repository 구조 확립
+---
 
-ViewModel에서 UI 상태 관리 흐름 OK
+### 📱 주요 화면 & 상태
 
-## 🔷 현재 동작 확인된 흐름 (완료된 것)
-              [사용자 입력] → Compose UI → ViewModel → Room DB 저장 ✔  
+| 화면 / 기능                    | 현재 구현 상태                                   | 필요한 추가 작업                                      |
+|------------------------------|--------------------------------------------------|-------------------------------------------------------|
+| DiaryWriteScreen             | Room + Firestore 저장 기능 ✔                    | UI 안정화                                              |
+| AnalyzeLoadingScreen         | 감정 분석 대기 화면 ✔                            | 필요 시 로딩시간 변경 (현재 7초로 설정됨)                 |
+| AnalyzeResultScreen          | 감정 결과 표시 및 Firestore 저장 ✔              | UI 개선 / 감정 결과 확인 흐름 정리 필요               |
+| EmotionCalendarScreen        | Room 기반 감정 표시 ✔                            | Firestore → Room sync 후 UI 반영 구조 설계 필요        |
+| JournalListScreen            | 목록 조회 및 감정 스티커 표시 ✔                  | Firestore 삭제 기능 / UI Dialog 등 개선 필요           |
+| Diary 삭제 기능              | Room 기준 삭제 가능 in journal ✔              | Firestore에서도 함께 삭제하는 통합 로직 필요           |
+| InboxScreen                  | 임시 UI 구현됨                              | 실제 편지 DB 구조 연결 필요                            |
+| LetterToTomorrowScreen       | 작성 화면 UI 일부 존재                            | 미래 날짜 설정 및 받기 기능 구현 필요              |
+| Firestore → Room 동기화      | ❌ 미구현                                         | 앱 실행 시 sync 처리(ViewModel 또는 Repository) 필요  |
+| ViewModel 구조 통합          | ✔ 기본 구조 있음                                 | Repository 분리 및 data layer 리팩터링 필요            |
+| 로그인 기반 UID 구조화       | ✔ 구현 완료                                       | Firestore 컬렉션 구조를 UID 기반으로 정리 필요         |
+| 편지 기능 전체               | Room 기준 일부 UI만 존재                         | Firestore 연동 여부 판단 후 로직 필요 여부 결정        |
 
-                                    ↓
-                                    
-                             Firestore에도 저장 ✔
-                             
-                                    ↓
-                                    
-                  감정 분석 → Firestore 결과 업데이트도 가능 ✔
 
-## 🔷 주요 화면
-화면	역할	Firestore 관련 상태
+---
 
-DiaryWriteScreen	일기 작성 & DB 저장	Firestore 저장 완료
+## 📌 2. 팀원이 실행하기 위해 필요한 설정
 
-AnalyzeLoadingScreen	감정 분석 호출	성공
+### ⚠️ 반드시 필요한 항목
 
-AnalyzeResultScreen	감정 결과 표시	UI 반영만 진행됨
+| 항목 | 설명 |
+|------|------|
+| `google-services.json` | Firebase Console → 직접 발급 → `app/` 폴더에 추가 |
+| Firebase Secrets | HuggingFace API Key는 절대 커밋 금지 |
+| Firebase 프로젝트 연동 | `firebase init` 후 기존 프로젝트 선택 |
+| Firestore 보안 규칙 | 인증에 따라 read/write 제한 가능 |
 
-EmotionCalendarScreen	글 목록 표시	Room 데이터만 사용
+---
 
-InboxScreen, LetterToTomorrowScreen	편지 저장까지는 가능	Firestore 읽기 기능 없음
+### 🔧 실행 시 필요한 커맨드 모음
 
-# 📌 2. 팀원이 실행하기 위해 필요한 작업
-## 🔧 반드시 필요한 것
-
-google-services.json을 각자 Firebase Console에서 다시 발급 → app/ 폴더에 직접 추가
-
-.env / secrets	HuggingFace API Key는 절대 커밋 금지 → Cloud Functions에서 Secret으로 사용
-
-Firebase 프로젝트 연동	firebase init → 기존 프로젝트 선택해서 Functions 연동 필요
-
-Firestore 규칙 확인	로그인 여부 따라 read/write 제한 가능
-
-## 🔧 팀원이 실행할 시 필요한 커맨드
-### Firebase 연결
+```bash
+# Firebase 로그인 및 프로젝트 연결
 firebase login
+firebase use --add           # 기존 프로젝트 선택
 
-firebase use --add   # 프로젝트 연결
-
-### Functions 설치
+# Functions 설치
 cd functions
-
 npm install
 
-### Firebase functions deploy
+# Secret 등록 (API Key 입력 모드가 나옴)
+firebase functions:secrets:set huggingface_key
+
+# Functions 배포
 firebase deploy --only functions
 
+🔐 API Key 보안 처리 방식
 
-⚠ Room DB는 앱 내부 저장이므로 그대로 사용 가능.
-Firestore 연결은 반드시 google-services.json + firebase init 필요.
+현재 프로젝트는 API Key를 하드코딩하지 않습니다.
+Firebase Secret Manager를 통해 암호화된 방식으로 함수 내에서만 접근합니다.
 
-# 📌 3. 앞으로 구현해야 할 기능
+// index.ts 내부 코드
+const HF_API_KEY = defineSecret("huggingface_key");
+const apiKey = HF_API_KEY.value();
 
-## 🚨 현재 부족한 부분 
+>따라서 json 파일이나 env 파일은 GitHub에 포함되지 않으며,
+>매 실행마다 Secret Manager에서 key를 로드하는 방식입니다.
 
-### 구현 필요 항목	현재 상태	필요성
-
-Firestore → 앱으로 불러오기(Read)	❌ 없음	앱 재실행 시 글이 안불러와짐
-
-Firestore ↔ Room DB 동기화	❌ 없음	오프라인/온라인 모드 문제
-
-감정 분석 결과 UI 반영	🔶 부분완료	Firestore 저장은 OK, UI 연결 필요
-
-수정/삭제 Firestore 반영	❌ 없음	DB와 Firestore 불일치 가능
-
-EmotionCalendar + Firestore 연동	❌ 없음	감정 분석 UI와 연동해야 함
