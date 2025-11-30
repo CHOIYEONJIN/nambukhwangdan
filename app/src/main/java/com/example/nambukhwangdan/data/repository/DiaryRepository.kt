@@ -14,4 +14,10 @@ class DiaryRepository @Inject constructor(private val diaryDao: DiaryDao) { // â
     suspend fun insertDiary(diary: DiaryEntity) {
         diaryDao.insertDiary(diary)
     }
+    suspend fun deleteDiaryById(id: String) {
+        diaryDao.deleteDiaryById(id)
+    }
+    suspend fun toggleLike(id: String) {
+        diaryDao.toggleLike(id)
+    }
 }

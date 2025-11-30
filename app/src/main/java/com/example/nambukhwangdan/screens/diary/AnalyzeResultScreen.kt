@@ -147,6 +147,13 @@ fun AnalyzeResultScreen(
 
                 // 인디케이터
                 Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    Box(
+                        Modifier
+                            .padding(5.dp)
+                            .size(10.dp)
+                            .background(color = Color.White, shape = CircleShape)
+                    )
                     Box(
                         Modifier
                             .padding(5.dp)
@@ -156,12 +163,6 @@ fun AnalyzeResultScreen(
                                 color = Variables.Color5,
                                 shape = RoundedCornerShape(999.dp)
                             )
-                    )
-                    Box(
-                        Modifier
-                            .padding(5.dp)
-                            .size(10.dp)
-                            .background(color = Color.White, shape = CircleShape)
                     )
                     Box(
                         Modifier
@@ -274,7 +275,7 @@ fun AnalyzeResultScreen(
                     content = diary,
                     dateMillis = dateMillis
                 )
-                bottomNavController.navigate(Routes.Home)
+                bottomNavController.navigate(Routes.LetterToTomorrow)
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -285,7 +286,7 @@ fun AnalyzeResultScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
         ) {
             Text(
-                "완료하기",
+                "다음으로",
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp

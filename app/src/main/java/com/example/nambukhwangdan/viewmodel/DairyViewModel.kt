@@ -17,12 +17,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 import java.time.YearMonth
 import java.util.UUID
 import javax.inject.Inject
@@ -157,23 +154,20 @@ class DiaryViewModel @Inject constructor(
         receiverName.value = name
     }
     // --- Repository를 사용하는 로직 (기존 두 번째 ViewModel의 내용) ---
-    val allDiaries = repo.getAllDiaries()
-        .map { diaries -> diaries.map { it.toDiary() } }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _displayMonth = MutableStateFlow(YearMonth.now())
     val displayMonth = _displayMonth.asStateFlow()
 
-    val diariesForMonth = combine(allDiaries, displayMonth) { diaries, month ->
-        diaries.filter { diary ->
-            val diaryMonth = YearMonth.from(
-                Instant.ofEpochMilli(diary.date)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-            )
-            diaryMonth == month
-        }.sortedByDescending { it.date }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+//    val diariesForMonth = combine(allDiaries, displayMonth) { diaries, month ->
+//        diaries.filter { diary ->
+//            val diaryMonth = YearMonth.from(
+//                Instant.ofEpochMilli(diary.date)
+//                    .atZone(ZoneId.systemDefault())
+//                    .toLocalDate()
+//            )
+//            diaryMonth == month
+//        }.sortedByDescending { it.date }
+//    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun moveToPreviousMonth() {
         _displayMonth.value = _displayMonth.value.minusMonths(1)
@@ -186,6 +180,21 @@ class DiaryViewModel @Inject constructor(
     fun saveDiary(diary: Diary) {
         viewModelScope.launch {
             repo.insertDiary(diary.toEntity())
+        }
+    }
+    val allDiaries = repo.getAllDiaries()
+        .map { diaries -> diaries.map { it.toDiary() } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun toggleLike(id: String) {
+        viewModelScope.launch {
+            repo.toggleLike(id)   // refresh 필요 없음
+        }
+    }
+
+    fun deleteDiary(id: String) {
+        viewModelScope.launch {
+            repo.deleteDiaryById(id)
         }
     }
 
