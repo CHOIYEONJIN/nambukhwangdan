@@ -97,6 +97,6 @@ Firebase Secret Manager를 통해 암호화된 방식으로 함수 내에서만 
 const HF_API_KEY = defineSecret("huggingface_key");
 const apiKey = HF_API_KEY.value();
 
->따라서 json 파일이나 env 파일은 GitHub에 포함되지 않으며,
->매 실행마다 Secret Manager에서 key를 로드하는 방식입니다.
+따라서 json 파일이나 env 파일은 GitHub에 포함되지 않으며,
+매 실행마다 Secret Manager에서 key를 로드하는 방식입니다.
 
