@@ -14,9 +14,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 import java.util.UUID
 import javax.inject.Inject
 
@@ -40,6 +42,30 @@ class DiaryViewModel @Inject constructor(
     )
     val pastLetters = _pastLetters.asStateFlow()
 
+    private val _remoteDiaries = MutableStateFlow<List<Diary>>(emptyList())
+    val remoteDiaries = _remoteDiaries.asStateFlow()
+
+    private val _currentYearMonth = MutableStateFlow(YearMonth.now())
+    private val _currentMonthDiaries = MutableStateFlow<List<Diary>>(emptyList())
+    val currentMonthDiaries = _currentMonthDiaries.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            userId?.let {
+                repo.syncDiaries()
+                repo.observeRemoteDiaries().collect { diaries ->
+                    _remoteDiaries.value = diaries
+                    repo.insertDiaries(diaries)
+                }
+            }
+        }
+        viewModelScope.launch {
+            _currentYearMonth
+                .flatMapLatest { ym -> repo.getDiariesByMonth(ym.year, ym.monthValue) }
+                .collect { _currentMonthDiaries.value = it }
+        }
+    }
+
     // 오늘 작성 중인 일기
     val todayDiary = MutableStateFlow("")
     // 선택한 날짜(초기값: 오늘)
@@ -53,16 +79,11 @@ class DiaryViewModel @Inject constructor(
     private val defaultReceiver = "누군가"
     val receiverName = MutableStateFlow(defaultReceiver)
 
-
     fun updateDiary(text: String) { todayDiary.value = text }
 
     fun setSelectedDate(millis: Long) { selectedDateMillis.value = millis }
     private val _isAnalyzing = MutableStateFlow(false)   // 내부에서 변경
     val isAnalyzing = _isAnalyzing.asStateFlow()         // 외부에서는 읽기 전용
-
-
-
-
 
     fun chooseEmotion(value: String) { selectedEmotion.value = value }
 
@@ -70,6 +91,7 @@ class DiaryViewModel @Inject constructor(
 
     fun persistDiaryAndAnalyze(bottomNavController: NavController) {
         // 🔹 여기서 새 id 만들어서 Diary 하나 생성
+        val now = System.currentTimeMillis()
         val diary = Diary(
             id = UUID.randomUUID().toString(),
             content = todayDiary.value,
@@ -77,9 +99,10 @@ class DiaryViewModel @Inject constructor(
             sticker = selectedSticker.value,
             date = selectedDateMillis.value,
             replyToId = replyToId.value,
-            createdAt = System.currentTimeMillis(),
+            createdAt = now,
             nickname = nicknameToUse.value,
-            userId = userId ?: ""
+            userId = userId ?: "",
+            updatedAt = now
         )
 
         viewModelScope.launch {
@@ -89,9 +112,7 @@ class DiaryViewModel @Inject constructor(
             repo.insertDiary(diary)
 
             // 2) 유저별 Firestore 저장
-            userId?.let { uid ->
-                repo.saveDiaryToFirestore(diary, uid)
-            }
+            repo.saveDiaryToFirestore(diary, userId)
 
             // 3) 감정 분석용 컬렉션에 저장 → Cloud Function 트리거
             repo.saveDiaryForAnalysis(diary)
@@ -124,20 +145,11 @@ class DiaryViewModel @Inject constructor(
     private val _nicknameToUse = MutableStateFlow(userNickname)
     val nicknameToUse = _nicknameToUse.asStateFlow()
 
-
     val replyToId = MutableStateFlow<String?>(null)
 
     fun setReplyToId(id: String) {
         replyToId.value = id
     }
-
-    // --- Repository를 사용하는 로직 (기존 두 번째 ViewModel의 내용) ---
-
-
-
-
-
-
 
     val allDiaries = repo.getAllDiaries()
         .map { diaries -> diaries.map { it } }
@@ -151,12 +163,22 @@ class DiaryViewModel @Inject constructor(
 
     fun deleteDiary(id: String) {
         viewModelScope.launch {
-            repo.deleteDiaryById(id)
-            val uid = userId          // 🔥 여기서 다시 한 번 안전 체크
-            if (uid != null) {
-            repo.deleteDiaryFromFirestore(id,uid)}
+            repo.deleteDiary(id)
         }
     }
+
+    fun syncDiaries() {
+        viewModelScope.launch { repo.syncDiaries() }
+    }
+
+    fun setMonth(year: Int, month: Int) {
+        _currentYearMonth.value = YearMonth.of(year, month)
+    }
+
+    fun updateDiary(diary: Diary) {
+        viewModelScope.launch { repo.updateDiary(diary) }
+    }
+
     private val _selectedUris = MutableStateFlow<List<Uri>>(emptyList())
     val selectedUris = _selectedUris.asStateFlow()
 
@@ -167,26 +189,12 @@ class DiaryViewModel @Inject constructor(
     fun removeUri(uri: Uri) {
         _selectedUris.value = _selectedUris.value.filterNot { it == uri }
     }
-    fun syncDiariesFromFirestore() {
-        firestore.collection("diaries")
-            .addSnapshotListener { snapshot, e ->
-                if (snapshot != null) {
-                    viewModelScope.launch {
-                        for (doc in snapshot.documents) {
-                            val diary = doc.toObject(Diary::class.java)
-                            if (diary != null) {
-                                repo.insertDiary(diary) // Room에 동기화
-                            }
-                        }
-                    }
-                }
-            }
-    }
+
     private val _detectedSentiment = MutableStateFlow<String?>(null)
     val detectedSentiment = _detectedSentiment
 
     private val _detectedScore = MutableStateFlow<Float?>(null)
-
+    val detectedScore = _detectedScore.asStateFlow()
 
     fun observeSentiment(diaryId: String) {
         userId?.let { uid ->
@@ -194,9 +202,7 @@ class DiaryViewModel @Inject constructor(
                 .document(uid)
                 .collection("diaries")
                 .document(diaryId)
-                .addSnapshotListener { snapshot, e ->
-                    if (e != null) return@addSnapshotListener
-
+                .addSnapshotListener { snapshot, _ ->
                     val sentiment = snapshot?.getString("sentiment")
                     val score = snapshot?.getDouble("score")?.toFloat()
 
@@ -204,6 +210,16 @@ class DiaryViewModel @Inject constructor(
                         _detectedSentiment.value = sentiment
                         _detectedScore.value = score
                         _isAnalyzing.value = false
+                        viewModelScope.launch {
+                            repo.getDiaryById(diaryId)?.let {
+                                repo.updateDiary(
+                                    it.copy(
+                                        sentimentLabel = sentiment,
+                                        sentimentScore = score
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
         }
@@ -211,14 +227,4 @@ class DiaryViewModel @Inject constructor(
     fun resetDetectedSentiment() {
         _detectedSentiment.value = null
     }
-
-
-
-
-
-
-
-
 }
-
-

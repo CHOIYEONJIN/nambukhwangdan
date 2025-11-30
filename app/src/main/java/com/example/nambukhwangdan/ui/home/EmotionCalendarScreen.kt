@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.nambukhwangdan.model.Letter.Letter
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.screens.diary.formatDate
 import com.example.nambukhwangdan.screens.journal.DiaryItem
 import com.example.nambukhwangdan.screens.journal.pretendard
@@ -65,18 +66,28 @@ fun EmotionCalendarScreen(
 
     LaunchedEffect(Unit) {
         letterViewModel.syncLettersFromFirestore()
-        diaryViewModel.syncDiariesFromFirestore()
+        diaryViewModel.syncDiaries()
     }
     // 🔹 오늘 날짜 기준
     var currentDate by remember { mutableStateOf(LocalDate.now()) }   // 현재 달
     var selectedDate by remember { mutableStateOf(currentDate) }     // 목록에 사용할 선택 날짜
 
-    // 🔹 전체 일기 (Room + Firestore 동기화 이후에도 여기로 모여 있음)
-    val diaries by diaryViewModel.allDiaries.collectAsState()
+    LaunchedEffect(currentDate) {
+        diaryViewModel.setMonth(currentDate.year, currentDate.monthValue)
+    }
+
+    val monthDiaries by diaryViewModel.currentMonthDiaries.collectAsState()
+    val daySentiments = remember(monthDiaries) {
+        monthDiaries.groupBy { diary ->
+            Instant.ofEpochMilli(diary.date)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+        }.mapValues { entry -> resolveDaySentiment(entry.value) }
+    }
 
     // 🔹 선택한 날짜에 해당하는 일기들만 필터링
-    val selectedDiaries = diaries.filter { diary ->
-        Instant.ofEpochMilli(diary.createdAt)
+    val selectedDiaries = monthDiaries.filter { diary ->
+        Instant.ofEpochMilli(diary.date)
             .atZone(ZoneId.systemDefault())
             .toLocalDate() == selectedDate
     }
@@ -204,8 +215,15 @@ fun EmotionCalendarScreen(
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    //날짜의 원형 box 내부
-                                    // 나중에 감정 이미지 첨부하면 됨
+                                    daySentiments[date]?.let { sentiment ->
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(6.dp)
+                                                .size(8.dp)
+                                                .background(sentimentColor(sentiment), CircleShape)
+                                        )
+                                    }
                                 }
                                 Text(
                                     text = date.dayOfMonth.toString(),
@@ -341,4 +359,17 @@ fun getCalendarDates(year: Int, month: Int): List<LocalDate> {
     }
 
     return prevDays + currentMonthDays + nextDays
+}
+
+
+private fun resolveDaySentiment(diaries: List<Diary>): String? {
+    val labels = diaries.mapNotNull { it.sentimentLabel }
+    if (labels.isEmpty()) return null
+    return labels.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+}
+
+private fun sentimentColor(label: String): Color = when (label.lowercase()) {
+    "positive", "긍정" -> Color(0xFF8BC34A)
+    "negative", "부정" -> Color(0xFFF44336)
+    else -> Color(0xFFFFC107)
 }

@@ -12,7 +12,10 @@ fun Diary.toEntity(): DiaryEntity {
         createdAt = this.createdAt,
         liked = this.liked,
         nickname = this.nickname,
-        userId=this.userId
+        userId = this.userId,
+        updatedAt = this.updatedAt,
+        sentimentLabel = this.sentimentLabel,
+        sentimentScore = this.sentimentScore
     )
 }
 
@@ -28,6 +31,9 @@ fun DiaryEntity.toDiary(): Diary {
         createdAt = this.createdAt,
         liked = this.liked,
         nickname = this.nickname,
-        userId=this.userId
+        userId = this.userId,
+        updatedAt = this.updatedAt,
+        sentimentLabel = this.sentimentLabel,
+        sentimentScore = this.sentimentScore
     )
 }
