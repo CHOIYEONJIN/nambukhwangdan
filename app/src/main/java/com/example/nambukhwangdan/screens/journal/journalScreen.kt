@@ -408,14 +408,20 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked
                     horizontalAlignment = Alignment.Start,
                     verticalArrangement = Arrangement.Top
                 ) {
-                    Text(
-                        text = titleText,
-                        fontFamily = pretendard,
-                        fontSize = 16.sp,
-                        color = Color.Black,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = titleText,
+                            fontFamily = pretendard,
+                            fontSize = 16.sp,
+                            color = Color.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        diary.sentimentLabel?.let { label ->
+                            Spacer(modifier = Modifier.width(8.dp))
+                            SentimentBadge(label)
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = diary.content,
@@ -471,6 +477,24 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked
     }
 }
 
+
+
+@Composable
+private fun SentimentBadge(label: String) {
+    val color = when (label.lowercase()) {
+        "positive", "긍정" -> Primary
+        "negative", "부정" -> Color(0xFFF44336)
+        else -> Color(0xFFFFC107)
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.15f))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(text = label, color = color, fontSize = 10.sp)
+    }
+}
 // --- 유틸리티 함수 (날짜 포매팅) ---
 
 /**
