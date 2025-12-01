@@ -43,12 +43,10 @@
 | AnalyzeLoadingScreen         | 감정 분석 대기 화면 ✔                            | 필요 시 로딩시간 변경 (현재 7초로 설정됨)                 |
 | AnalyzeResultScreen          | 감정 결과 표시 및 Firestore 저장 ✔              | UI 개선 / 감정 결과 확인 흐름 정리 필요               |
 | EmotionCalendarScreen        | Room 기반 감정 표시 ✔                            | Firestore → Room sync 후 UI 반영 구조 설계 필요        |
-| JournalListScreen            | 목록 조회 및 감정 스티커 표시 ✔                  | Firestore 삭제 기능 / UI Dialog 등 개선 필요           |
-| Diary 삭제 기능              | Room 기준 삭제 가능 in journal ✔              | Firestore에서도 함께 삭제하는 통합 로직 필요           |
+| JournalListScreen            | 목록 조회 및 감정 스티커 표시 ✔                  |  UI Dialog 등 개선 필요           |
 | InboxScreen                  | 임시 UI 구현됨                              | 실제 편지 DB 구조 연결 필요                            |
 | LetterToTomorrowScreen       | 작성 화면 UI 일부 존재                            | 미래 날짜 설정 및 받기 기능 구현 필요              |
 | Firestore → Room 동기화      | ❌ 미구현                                         | 앱 실행 시 sync 처리(ViewModel 또는 Repository) 필요  |
-| ViewModel 구조 통합          | ✔ 기본 구조 있음                                 | Repository 분리 및 data layer 리팩터링 필요            |
 | 로그인 기반 UID 구조화       | ✔ 구현 완료                                       | Firestore 컬렉션 구조를 UID 기반으로 정리 필요         |
 | 편지 기능 전체               | Room 기준 일부 UI만 존재                         | Firestore 연동 여부 판단 후 로직 필요 여부 결정        |
 
