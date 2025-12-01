@@ -184,6 +184,11 @@ fun EmotionCalendarScreen(viewModel: DiaryViewModel) {
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+
+                    // ⭐️ 원본 편지 내용 임시 정의 (JournalScreen과 동일하게)
+                    // 실제로는 ViewModel을 통해 selectedDiaries에 해당하는 원본 편지 내용을 가져와야 합니다.
+                    val dummyLetterContent = "감기에 걸려서 너무 아파 과제를 하나도 못해서 자괴감이 너무 떨어진 것 같아. 내일은 꼭 과제를 제출했으면 좋겠다!"
+
                     selectedDiaries.forEach { diary ->
                         var expanded by rememberSaveable(diary.id) { mutableStateOf(false) }
 
@@ -191,8 +196,15 @@ fun EmotionCalendarScreen(viewModel: DiaryViewModel) {
                             diary = diary,
                             pretendard = pretendard,
                             isExpanded = expanded,
+                            // 1. 원본 편지 내용 인자 추가
+                            originalLetterContent = dummyLetterContent,
                             onLiked = { id -> viewModel.toggleLike(id) },
                             onToggle = { expanded = !expanded },
+                            // 2. onEdit 인자 추가
+                            onEdit = {
+                                // TODO: 일기 수정 화면으로 이동하는 로직을 여기에 구현하세요.
+                                // 예: navController.navigate("edit_diary/${diary.id}")
+                            },
                             onDelete = { id -> viewModel.deleteDiary(id) }
                         )
                     }

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,6 +30,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
 import com.example.nambukhwangdan.model.Diary
 import com.example.nambukhwangdan.ui.theme.Background
@@ -76,13 +77,14 @@ val pretendard = FontFamily.Default
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun JournalScreen(
-    viewModel: DiaryViewModel
+    viewModel: DiaryViewModel,
+    navController: NavHostController
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedSortOption by remember { mutableStateOf(SortOption.TIME_DESC) }
 
-    val diaries by viewModel.allDiaries.collectAsState(initial = emptyList<Diary>())
-
+    val diaries by viewModel.allRegularDiaries.collectAsState(initial = emptyList<Diary>())
+    val allLetters by viewModel.allSentLetters.collectAsState(initial = emptyList<Diary>()) // 모든 편지 데이터
 
     val filteredDiaries = remember(diaries, selectedDate, selectedSortOption) {
         val monthlyFiltered = diaries.filter { diary ->
@@ -128,7 +130,7 @@ fun JournalScreen(
                 monthNumber = currentMonthNumber,
                 monthEnglish = currentMonthEnglish,
                 pretendard = pretendard,
-                onClick = { showMonthPopup = true } // ⭐️ 팝업 열기
+                onClick = { showMonthPopup = true }
             )
             Spacer(modifier = Modifier.weight(1f))
             SortOptionPill(
@@ -143,11 +145,15 @@ fun JournalScreen(
         if (filteredDiaries.isEmpty()) { // ⭐️ 필터링된 목록 사용
             EmptyJournalState()
         } else {
-            DiaryList(diaries = filteredDiaries, viewModel = viewModel) // ⭐️ 필터링된 목록 전달
+            // ⭐️ DiaryList에 모든 편지 목록을 전달
+            DiaryList(
+                diaries = filteredDiaries,
+                allLetters = allLetters,
+                viewModel = viewModel
+            )
         }
     }
 
-    // ⭐️ 4. 팝업 구현 영역: 여기에 MonthOnlyDatePickerDialog 연결
     if (showMonthPopup) {
         MonthOnlyDatePickerDialog(
             initialDate = selectedDate, // 현재 선택된 날짜를 초기값으로 전달
@@ -214,7 +220,6 @@ fun MonthSelector(
         )
     }
 }
-
 
 
 @Composable
@@ -304,7 +309,12 @@ fun SortSelectionDialog(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
+private fun DiaryList(diaries: List<Diary>, allLetters: List<Diary>, viewModel: DiaryViewModel) {
+    // ⭐️ 맵을 사용하여 편지 ID로 내용을 빠르게 찾을 수 있도록 준비합니다.
+    val letterMap = remember(allLetters) {
+        allLetters.associateBy { it.id }
+    }
+
     LazyColumn(
         modifier = Modifier
             .width(350.dp)
@@ -313,14 +323,23 @@ private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(diaries, key = { it.id }) { diary ->
-            // ⭐️ 기능 유지: 확장 상태 관리
             var expanded by rememberSaveable(diary.id) { mutableStateOf(false) }
+
+            // ⭐️ 해당 일기(diary)가 참조한 원본 편지(letter)의 내용을 찾습니다.
+            val originalLetterContent = remember(diary.replyToId, letterMap) {
+                // replyToId가 null이 아니면, letterMap에서 해당 ID의 편지 내용을 찾고, 없으면 "원본 편지 없음"을 반환합니다.
+                diary.replyToId?.let { letterMap[it]?.content } ?: "원본 편지 없음"
+            }
+
             DiaryItem(
                 diary = diary,
                 pretendard = pretendard,
                 isExpanded = expanded,
+                // ⭐️ 실제 원본 편지 내용 전달
+                originalLetterContent = originalLetterContent,
                 onLiked ={ id -> viewModel.toggleLike(id)},
                 onToggle = {expanded=!expanded},
+                onEdit = { /* TODO: 수정 화면으로 이동 로직 */ },
                 onDelete = { id -> viewModel.deleteDiary(id) }
             )
         }
@@ -329,18 +348,30 @@ private fun DiaryList(diaries: List<Diary>, viewModel: DiaryViewModel) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked:(String) -> Unit, onToggle: () -> Unit, onDelete: (String) -> Unit) {
+fun DiaryItem(
+    diary: Diary,
+    pretendard: FontFamily,
+    isExpanded: Boolean,
+    originalLetterContent: String,
+    onLiked:(String) -> Unit,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: (String) -> Unit
+) {
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
+    val displayMonthAndDay = Instant.ofEpochMilli(diary.createdAt)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN))
+
     val displayDayAndDayOfWeek = diary.createdAt.dayLabelForInbox() // 예: "25 수"
     val emotionText = diary.sticker.orEmpty().ifBlank { "💭" }
-    val titleText = diary.content.split("\n").firstOrNull().orEmpty()
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = if (isExpanded) 0.dp else collapsedHeight)
             .animateContentSize(animationSpec = tween(300))
             .clickable { onToggle() },
 
@@ -352,119 +383,176 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.Start
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = collapsedHeight),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
 
-                Column(
+            // ⭐️ 접힌 상태 Row
+            if (!isExpanded) {
+                Row(
                     modifier = Modifier
-                        .width(70.dp)
-                        .fillMaxHeight()
-                        .padding(horizontal = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                        .fillMaxWidth()
+                        .height(collapsedHeight) // ⭐️ 접힌 상태의 고정 높이 유지
+                        .padding(end = 16.dp), // 좋아요 아이콘을 위한 오른쪽 패딩 추가
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(Primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(emotionText, fontSize = 16.sp, color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.height(5.dp))
 
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .size(width = 30.dp, height = 14.dp)
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
+                            .width(70.dp)
+                            .fillMaxHeight()
+                            .padding(horizontal = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(Primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(emotionText, fontSize = 16.sp, color = Color.White)
+                        }
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(width = 30.dp, height = 14.dp)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = displayDayAndDayOfWeek,
+                                fontSize = 8.sp,
+                                fontFamily = pretendard,
+                                color = Color.Black
+                            )
+                        }
+                    }
+
+                    // 구분선
+                    Spacer(modifier = Modifier
+                        .width(1.dp)
+                        .height(50.dp)
+                        .background(Grey))
+
+                    // ⭐️ 본문만 2줄 표시 영역
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight() // 부모 Row 높이에 맞게 채움
+                            .padding(start = 10.dp, end = 10.dp),
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = displayDayAndDayOfWeek,
-                            fontSize = 8.sp,
+                            text = diary.content,
                             fontFamily = pretendard,
-                            color = Color.Black
+                            fontSize = 14.sp,
+                            color = Color.Black,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    // ⭐️ 좋아요 아이콘
+                    Icon(
+                        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (isLiked) Primary else Grey,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onLiked(diary.id)}
+                    )
                 }
+            }
 
-                // 구분선
-                Spacer(modifier = Modifier
-                    .width(1.dp)
-                    .height(50.dp)
-                    .background(Grey))
 
+            // ⭐️ 확장된 상세 내용 영역 (Expanded State)
+            if (isExpanded) {
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(collapsedHeight) // collapsedHeight 만큼 높이 설정
-                        .padding(start = 10.dp, end = 10.dp, top = 10.dp), // 상단 패딩 추가
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Top
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 ) {
+                    // 1. 헤더 (날짜 및 수정/삭제 아이콘)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // ⭐️ 'n월 n일 의 나에게서 온 편지' 텍스트
+                        Text(
+                            text = "$displayMonthAndDay 의 나에게서 온 편지",
+                            fontFamily = pretendard,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        // ⭐️ 수정 및 삭제 아이콘
+                        Row {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Diary",
+                                tint = Grey,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { onEdit() }
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Diary",
+                                tint = Color(0xFFB00020),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { onDelete(diary.id) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 2. 원본 편지 내용 (어제 편지)
                     Text(
-                        text = titleText,
+                        // ⭐️ 실제 원본 편지 내용을 표시합니다.
+                        text = originalLetterContent,
                         fontFamily = pretendard,
-                        fontSize = 16.sp,
-                        color = Color.Black,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontSize = 15.sp,
+                        color = Color.Black
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 3. 사진 Placeholder 3개 (이 부분은 필요에 따라 실제 로직으로 변경해야 합니다.)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        repeat(3) {
+                            Box(
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Grey.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Photo $it", color = Grey)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 4. 일기 전문
                     Text(
                         text = diary.content,
                         fontFamily = pretendard,
                         fontSize = 14.sp,
-                        color = Color.Gray,
-                        // ⭐️ 기능 유지: 확장 상태에 따라 maxLines 변경
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-                        overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis
+                        color = Color.DarkGray,
+                        lineHeight = 22.sp // 가독성 향상
                     )
-                }
 
-                // 3. 좋아요 아이콘
-                Icon(
-                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (isLiked) Primary else Grey,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { onLiked(diary.id)}
-                )
-
-                Spacer(modifier = Modifier.width(20.dp))
-            }
-
-            // 4. 확장된 상세 내용 영역
-            if (isExpanded) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .background(Surface.copy(alpha = 0.5f))
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(){
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "delete diary",
-                            modifier = Modifier.clickable { onDelete(diary.id) },
-                            tint = Color(0xFFB00020) // 오류/삭제 계열 색상
-                        )
-                        Text(
-                            "⭐️ 일기 상세 내용 추가 UI 영역 (ID: ${diary.id})",
-                            fontFamily = pretendard,
-                            fontSize = 14.sp
-                        )
-                    }
-
+                    // ⭐️ 확장된 내용의 하단 공간 확보
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -472,10 +560,6 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked
 }
 
 // --- 유틸리티 함수 (날짜 포매팅) ---
-
-/**
- * Diary의 createdAt (Long)에서 "일 요일" 형식의 문자열을 반환합니다. (예: "25 수")
- */
 @RequiresApi(Build.VERSION_CODES.O)
 private fun Long.dayLabelForInbox(): String {
     val date = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -484,7 +568,6 @@ private fun Long.dayLabelForInbox(): String {
 }
 
 // --- Empty State 컴포넌트 ---
-
 @Composable
 private fun EmptyJournalState() {
     Column(
@@ -501,12 +584,3 @@ private fun EmptyJournalState() {
         )
     }
 }
-
-// --- Preview (ViewModel 의존성으로 인해 주석 처리) ---
-
-// @Preview(showBackground = true, showSystemUi = true)
-// @Composable
-// private fun JournalScreenPreview() {
-//      // Preview를 실행하려면 DiaryViewModel의 더미 구현이 필요합니다.
-//      // JournalScreen(viewModel = DummyDiaryViewModel())
-// }

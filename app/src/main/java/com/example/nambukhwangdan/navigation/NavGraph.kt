@@ -7,12 +7,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.nambukhwangdan.screens.calender.EmotionCalendarScreen
-import com.example.nambukhwangdan.screens.diary.AnalyzeLoadingScreen
+import com.example.nambukhwangdan.screens.diary.AnalyzeLoadingOverlay
 import com.example.nambukhwangdan.screens.diary.AnalyzeResultScreen
 import com.example.nambukhwangdan.screens.diary.DiaryWriteScreen
 import com.example.nambukhwangdan.screens.diary.LetterToTomorrowScreen
 import com.example.nambukhwangdan.screens.home.HomeScreen
-import com.example.nambukhwangdan.screens.journal.journalScreen
+import com.example.nambukhwangdan.screens.journal.JournalScreen
 import com.example.nambukhwangdan.screens.letters.NewLetterScreen
 import com.example.nambukhwangdan.screens.letters.ReplyScreen
 import com.example.nambukhwangdan.screens.onboarding.LoginScreen
@@ -30,15 +30,15 @@ fun NavGraph(navController: NavHostController) {
         // route 가 list일 떄 TodoListScreen으로 이동함
         // 할 일 목록 화면으로 이동한다
         composable("list") {
-            journalScreen(viewModel, navController)
+            JournalScreen(viewModel, navController)
         }
         // route 가 addEdit일 때 AddEditTodoScreen으로 이동함
         // 새로운 todo를 만드는 화면으로 이동할 때 사용하는 route
         composable (route="EmotionCalendarScreen") {
             EmotionCalendarScreen()
         }
-        composable(route="AnalyzeLoadingScreen") {
-            AnalyzeLoadingScreen(viewModel,navController)
+        composable(route="AnalyzeLoadingOverlay") {
+            AnalyzeLoadingOverlay(viewModel,navController)
         }
         composable(route="AnalyzeResultScreen"){
             AnalyzeResultScreen(viewModel,navController)
@@ -70,10 +70,7 @@ fun NavGraph(navController: NavHostController) {
                 }
             }
 
-            DiaryWriteScreen(
-                viewModel = viewModel,
-                navController = navController
-            )
+            DiaryWriteScreen(viewModel,navController)
         }
         composable("LetterToTomorrowScreen"){
             LetterToTomorrowScreen(viewModel,navController)

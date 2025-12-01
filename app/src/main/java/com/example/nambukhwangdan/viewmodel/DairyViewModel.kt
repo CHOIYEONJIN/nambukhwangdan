@@ -31,16 +31,21 @@ class DiaryViewModel @Inject constructor(
     var isAnalyzing by mutableStateOf(false)
         private set
     // 설계서: "과거의 내 편지 표시":contentReference[oaicite:2]{index=2}
-    private val _pastLetters = MutableStateFlow(
-        listOf(
-            Diary(
-                id = UUID.randomUUID().toString(),
-                content = "과거에 작성한 일기 내용이 여기에 뜨게 됩니다",
-                sendToFuture = true
-            )
-        )
-    )
-    val pastLetters = _pastLetters.asStateFlow()
+//    private val _pastLetters = MutableStateFlow(
+//        listOf(
+//            Diary(
+//                id = UUID.randomUUID().toString(),
+//                content = "과거에 작성한 일기 내용이 여기에 뜨게 됩니다",
+//                sendToFuture = true
+//            )
+//        )
+//    )
+//
+//    val pastLetters = _pastLetters.asStateFlow()
+    val allDiaries = repo.getAllDiaries()
+        .map { diaries -> diaries.map { it.toDiary() } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val pastLetters = allDiaries
 
     // 오늘 작성 중인 일기
     val todayDiary = MutableStateFlow("")
@@ -120,7 +125,6 @@ class DiaryViewModel @Inject constructor(
         dateMillis: Long = selectedDateMillis.value
     ): Diary {
         val diary = buildDiary(content, sendToFuture, dateMillis)
-        addDiary(diary)
         saveDiary(diary)
         clearForNewEntry()
         return diary
@@ -129,13 +133,13 @@ class DiaryViewModel @Inject constructor(
         isAnalyzing = true
         runAnalyze(bottomNavController)  // 기존 분석 함수
     }
-    fun addDiary(diary: Diary) {
-        _pastLetters.value = _pastLetters.value + diary
-    }
+//    fun addDiary(diary: Diary) {
+//        _pastLetters.value = _pastLetters.value + diary
+//    }
     private val _isAnonymous = MutableStateFlow(false)
     val isAnonymous = _isAnonymous.asStateFlow()
 
-    private val userNickname = "닉네임" // 실제 로그인 정보에서 가져올 예정 (임시)
+    private val userNickname = "나" // 실제 로그인 정보에서 가져올 예정 (임시)
     private val _nicknameToUse = MutableStateFlow(userNickname)
     val nicknameToUse = _nicknameToUse.asStateFlow()
 
@@ -182,9 +186,16 @@ class DiaryViewModel @Inject constructor(
             repo.insertDiary(diary.toEntity())
         }
     }
-    val allDiaries = repo.getAllDiaries()
-        .map { diaries -> diaries.map { it.toDiary() } }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val allRegularDiaries = allDiaries
+        .map { diaries ->
+            diaries.filter { !it.sendToFuture }
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Lazily,
+            emptyList()
+        )
 
     fun toggleLike(id: String) {
         viewModelScope.launch {
@@ -197,6 +208,17 @@ class DiaryViewModel @Inject constructor(
             repo.deleteDiaryById(id)
         }
     }
+
+    val allSentLetters = allDiaries
+        .map { diaries ->
+            diaries.filter { it.sendToFuture }
+
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Lazily,
+            emptyList()
+        )
 
     }
 

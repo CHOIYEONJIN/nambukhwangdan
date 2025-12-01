@@ -292,7 +292,7 @@ fun DiaryWriteScreen(
             Text("다음으로", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         }
         if (viewModel.isAnalyzing) {
-            AnalyzeLoadingOverlay(bottomNavController)   // ← Overlay 컴포저블 호출
+            AnalyzeLoadingOverlay(viewModel, bottomNavController)   // ← Overlay 컴포저블 호출
         }
 
         // 달력 팝업 구현 부분

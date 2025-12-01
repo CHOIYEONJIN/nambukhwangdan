@@ -53,9 +53,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
 
-// swipeBack 함수는 기존대로 유지
-// 이 함수는 외부에서 확장 함수로 정의되었거나, LoginScreen 내부에 정의되어 있다고 가정하고 그대로 사용합니다.
-// 예제에서는 컴파일을 위해 'composed' Modifier 함수를 사용하지 않고 더미로 대체합니다.
 private fun Modifier.swipeBack(onBack: () -> Unit) = this // 실제 구현 대신 임시 함수로 대체
 
 @RequiresApi(Build.VERSION_CODES.O)

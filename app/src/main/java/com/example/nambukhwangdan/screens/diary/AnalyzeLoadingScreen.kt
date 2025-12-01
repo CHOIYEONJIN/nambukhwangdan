@@ -17,10 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import kotlinx.coroutines.delay
 
 @Composable
 fun AnalyzeLoadingOverlay(
+    viewModel: DiaryViewModel,
     bottomNavController: NavController
 ) {
     LaunchedEffect(Unit) {
