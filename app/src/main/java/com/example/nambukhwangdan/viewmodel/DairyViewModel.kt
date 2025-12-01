@@ -12,12 +12,15 @@ import com.example.nambukhwangdan.model.Diary
 import com.example.nambukhwangdan.model.toDiary
 import com.example.nambukhwangdan.model.toEntity
 import com.example.nambukhwangdan.navigation.Routes
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -28,6 +31,7 @@ import javax.inject.Inject
 class DiaryViewModel @Inject constructor(
     private val repo: DiaryRepository
 ) : ViewModel() {
+    private val auth = FirebaseAuth.getInstance()
     var isAnalyzing by mutableStateOf(false)
         private set
     // 설계서: "과거의 내 편지 표시":contentReference[oaicite:2]{index=2}
@@ -41,6 +45,9 @@ class DiaryViewModel @Inject constructor(
         )
     )
     val pastLetters = _pastLetters.asStateFlow()
+
+    private val _remoteSyncedDiaries = MutableStateFlow<List<Diary>>(emptyList())
+    val remoteSyncedDiaries = _remoteSyncedDiaries.asStateFlow()
 
     // 오늘 작성 중인 일기
     val todayDiary = MutableStateFlow("")
@@ -195,6 +202,26 @@ class DiaryViewModel @Inject constructor(
     fun deleteDiary(id: String) {
         viewModelScope.launch {
             repo.deleteDiaryById(id)
+        }
+    }
+
+    fun syncFromFirestore() {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            repo.observeRemoteDiaries(userId)
+                .onEach { diaries ->
+                    val entities = diaries.map { diary ->
+                        val normalizedId = diary.id.ifBlank { UUID.randomUUID().toString() }
+                        diary.copy(id = normalizedId).toEntity()
+                    }
+                    repo.insertDiaries(entities)
+                    _remoteSyncedDiaries.value = diaries
+                }
+                .catch {
+                    val localDiaries = repo.getAllDiariesOnce().map { it.toDiary() }
+                    _remoteSyncedDiaries.value = localDiaries
+                }
+                .collect()
         }
     }
 

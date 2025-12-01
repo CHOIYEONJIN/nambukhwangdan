@@ -1,5 +1,6 @@
 package com.example.nambukhwangdan.di
 
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import dagger.Module
 import dagger.Provides
@@ -15,4 +16,9 @@ object FirebaseModule {
     @Singleton
     fun provideFirebaseFunctions(): FirebaseFunctions =
         FirebaseFunctions.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore =
+        FirebaseFirestore.getInstance()
 }
