@@ -284,7 +284,11 @@ fun NewLetterScreen(
         // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistLetter()
+                if (receiverName == "익명의 누군가") {
+                    viewModel.sendRandomLetter(letterText)
+                } else {
+                    viewModel.persistLetter()
+                }
                 bottomNavController.navigate(Routes.Home) {
                     popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
                     launchSingleTop = true                          // ← 중복 생성 방지

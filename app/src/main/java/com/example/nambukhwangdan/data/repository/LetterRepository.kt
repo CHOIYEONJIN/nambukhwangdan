@@ -1,12 +1,15 @@
 package com.example.nambukhwangdan.data.repository
+import com.example.nambukhwangdan.data.FirebaseFunctionsSource
 import com.example.nambukhwangdan.data.local.LetterDao
 import com.example.nambukhwangdan.model.Letter.Letter
 import com.example.nambukhwangdan.model.Letter.toEntity
 import com.example.nambukhwangdan.model.Letter.toLetter
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,6 +55,26 @@ class LetterRepository @Inject constructor(
         true
     } catch (e: Exception) {
         false
+    }
+    suspend fun sendRandomLetter(
+        senderId: String,
+        content: String
+    ) {
+        val receiverId = FirebaseFunctionsSource().pickRandomUser()
+
+        val letter = hashMapOf(
+            "senderId" to senderId,
+            "receiverId" to receiverId,
+            "content" to content,
+            "sendAt" to FieldValue.serverTimestamp()
+        )
+
+        firestore.collection("users")
+            .document(receiverId)
+            .collection("letters")
+            .document(UUID.randomUUID().toString())
+            .set(letter)
+            .await()
     }
 
 

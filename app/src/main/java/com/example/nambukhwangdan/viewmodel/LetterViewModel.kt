@@ -1,5 +1,6 @@
 package com.example.nambukhwangdan.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nambukhwangdan.data.repository.LetterRepository
@@ -131,6 +132,23 @@ class LetterViewModel @Inject constructor(
             }
         }
     }
+    fun sendRandomLetter(content: String) {
+        val uid = userId
+        if (uid != null) {
+            Log.d("RandomTest", "🔥 sendRandomLetter 호출됨 / senderId=${userId}")
+
+            viewModelScope.launch {
+            try {
+                repo.sendRandomLetter(
+                    senderId = uid,
+                    content = content
+                )
+            } catch (e: Exception) {
+                Log.e("LetterViewModel", "Random letter error", e)
+            }
+        }}
+    }
+
 
 
 }
