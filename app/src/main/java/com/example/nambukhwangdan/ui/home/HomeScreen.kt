@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.screens.diary.formatDate
 import com.example.nambukhwangdan.ui.theme.Background

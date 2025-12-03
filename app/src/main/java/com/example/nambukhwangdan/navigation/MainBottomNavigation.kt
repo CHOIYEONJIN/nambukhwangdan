@@ -35,6 +35,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.R
 
+
 @Composable
 fun MainBottomNavigation(
     navController: NavHostController,

@@ -1,18 +1,16 @@
 
 package com.example.nambukhwangdan.data.local
-import com.example.nambukhwangdan.data.local.DiaryDao
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.example.nambukhwangdan.model.Converters
-import com.example.nambukhwangdan.model.DiaryEntity
+import com.example.nambukhwangdan.model.Diary.DiaryEntity
+import com.example.nambukhwangdan.model.Letter.LetterEntity
 
 @Database(
-    entities = [DiaryEntity::class],
-    version = 1,
+    entities = [DiaryEntity::class, LetterEntity::class],
+    version = 5,        // ← 변경했으면 버전 과거 값보다 꼭 높여야 함
     exportSchema = false
 )
-@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
+    abstract fun letterDao(): LetterDao
 }

@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 
 @Composable

@@ -57,7 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
 import com.example.nambukhwangdan.ui.theme.Primary
@@ -333,7 +333,7 @@ fun DiaryItem(diary: Diary, pretendard: FontFamily, isExpanded: Boolean, onLiked
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
-    val displayDayAndDayOfWeek = diary.createdAt.dayLabelForInbox() // 예: "25 수"
+    val displayDayAndDayOfWeek = diary.date.dayLabelForInbox() // 예: "25 수"
     val emotionText = diary.sticker.orEmpty().ifBlank { "💭" }
     val titleText = diary.content.split("\n").firstOrNull().orEmpty()
 

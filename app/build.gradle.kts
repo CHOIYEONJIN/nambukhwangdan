@@ -9,6 +9,7 @@ plugins {
 }
 
 android {
+
     namespace = "com.example.nambukhwangdan"
     compileSdk = 36
 
@@ -49,6 +50,14 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
+    packaging {
+        resources {
+            excludes += "google/**"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
+
 }
 
 dependencies {
@@ -64,6 +73,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.room.ktx)
+    implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -91,9 +102,6 @@ dependencies {
     // DataStore (Preferences)
     implementation(libs.androidx.datastore.preferences)
 
-    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
-    implementation("com.google.firebase:firebase-analytics")
-
     // Coroutine
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
@@ -106,4 +114,11 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.identity.googleid)
+
+    implementation(libs.okhttp)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.firebase.functions)
+
+
 }
