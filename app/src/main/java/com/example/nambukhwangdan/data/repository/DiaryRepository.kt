@@ -69,41 +69,51 @@ class DiaryRepository @Inject constructor(
             .document(userId)
             .collection("diaries")
 
-    suspend fun saveDiaryToFirestore(diary: Diary, userId: String? = auth.currentUser?.uid): Boolean = try {
-        val uid = userId ?: return false
-        if (!canSync()) return false
-        userCollection(uid)
-            .document(diary.id)
-            .set(diary.toFirestoreMap())
-            .await()
-        true
-    } catch (e: Exception) { false }
+    suspend fun saveDiaryToFirestore(diary: Diary, userId: String? = auth.currentUser?.uid): Boolean {
+        return try {
+            val uid = userId ?: return false
+            if (!canSync()) return false
+            userCollection(uid)
+                .document(diary.id)
+                .set(diary.toFirestoreMap())
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 
-    suspend fun saveDiaryForAnalysis(diary: Diary): Boolean = try {
-        if (!canSync()) return false
-        firestore.collection("diary_entries")
-            .document(diary.id)
-            .set(
-                mapOf(
-                    "text" to diary.content,
-                    "createdAt" to diary.createdAt,
-                    "userId" to diary.userId
+    suspend fun saveDiaryForAnalysis(diary: Diary): Boolean {
+        return try {
+            if (!canSync()) return false
+            firestore.collection("diary_entries")
+                .document(diary.id)
+                .set(
+                    mapOf(
+                        "text" to diary.content,
+                        "createdAt" to diary.createdAt,
+                        "userId" to diary.userId
+                    )
                 )
-            )
-            .await()
-        true
-    } catch (e: Exception) { false }
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 
-    suspend fun deleteDiaryFromFirestore(id: String, userId: String? = auth.currentUser?.uid): Boolean = try {
-        val uid = userId ?: return false
-        if (!canSync()) return false
-        userCollection(uid)
-            .document(id)
-            .delete()
-            .await()
-        true
-    } catch (e: Exception) {
-        false
+    suspend fun deleteDiaryFromFirestore(id: String, userId: String? = auth.currentUser?.uid): Boolean {
+        return try {
+            val uid = userId ?: return false
+            if (!canSync()) return false
+            userCollection(uid)
+                .document(id)
+                .delete()
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun observeRemoteDiaries(): Flow<List<Diary>> {
