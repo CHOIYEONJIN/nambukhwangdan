@@ -58,6 +58,7 @@ class LetterRepository @Inject constructor(
     }
     suspend fun sendRandomLetter(
         senderId: String,
+        senderNickname: String,
         content: String
     ) {
         val receiverId = FirebaseFunctionsSource().pickRandomUser()
@@ -66,6 +67,7 @@ class LetterRepository @Inject constructor(
             "senderId" to senderId,
             "receiverId" to receiverId,
             "content" to content,
+            "nickname" to senderNickname,
             "sendAt" to FieldValue.serverTimestamp()
         )
 

@@ -50,11 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
+import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -69,9 +71,13 @@ fun NewLetterScreen(
     viewModel: LetterViewModel= hiltViewModel(),
     bottomNavController: NavController
 ) {
-
+    val authViewModel: AuthViewModel = viewModel()
+    val nickname = authViewModel.authState.collectAsState().value.currentNickname
     LaunchedEffect(Unit) {
         viewModel.updateContent("")   // 항상 입력 칸을 빈칸
+    }
+    LaunchedEffect(nickname) {
+        nickname?.let { viewModel.setUserNickname(it) }
     }
     var showReceiverDialog by remember { mutableStateOf(false) }
     val letterText by viewModel.letterContent.collectAsState()
