@@ -21,6 +21,7 @@ import com.example.nambukhwangdan.ui.onboarding.OnboardingIntroScreen
 import com.example.nambukhwangdan.ui.onboarding.OnboardingNicknameScreen
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -28,7 +29,7 @@ fun AppNavHost() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val diaryViewModel: DiaryViewModel = viewModel()
-
+    val letterViewModel: LetterViewModel =viewModel()
     val authState by authViewModel.authState.collectAsState()
 
     if (authState.isLoading) {
@@ -72,8 +73,8 @@ fun AppNavHost() {
                 MainScreenHost(
                     appNavController = navController,   // 👈 AppNav 내려줌
                     diaryViewModel = diaryViewModel,
-                    authViewModel=authViewModel // 👈 AuthViewModel
-
+                    authViewModel=authViewModel, // 👈 AuthViewModel
+                    letterViewModel= letterViewModel
                 )
             }
 
