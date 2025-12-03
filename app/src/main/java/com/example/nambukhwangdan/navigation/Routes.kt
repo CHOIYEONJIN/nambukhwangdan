@@ -17,4 +17,6 @@ object Routes {
     const val AnalyzeResult = "analyze_result"
     const val LetterToTomorrow = "letter_to_tomorrow"
     const val NewLetter="NewLetter"
+
+    const val ReplyScreen="ReplyScreen"
 }

@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.*
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
 import com.example.nambukhwangdan.ui.theme.Primary

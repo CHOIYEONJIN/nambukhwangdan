@@ -1,7 +1,5 @@
 package com.example.nambukhwangdan.screens.diary
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,13 +35,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
-import com.example.nambukhwangdan.ui.theme.Variables
-import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -52,18 +50,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LetterToTomorrowScreen(
-    viewModel: DiaryViewModel,
+    viewModel: LetterViewModel = hiltViewModel(),
     navController: NavController
 ) {
-    val diary by viewModel.todayDiary.collectAsState()
+    val letterText by viewModel.letterContent.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
-        onResult = { uris ->
-            // 선택된 URI 리스트를 ViewModel에 전달
-            viewModel.setSelectedUris(uris)
-        }
-    )
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
@@ -105,7 +96,7 @@ fun LetterToTomorrowScreen(
                         .width(24.dp)
                         .height(10.dp)
                         .background(
-                            color = Variables.Color5,
+                            color = Primary,
                             shape = RoundedCornerShape(999.dp)
                         )
                 )
@@ -124,8 +115,8 @@ fun LetterToTomorrowScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 TextField(
-                    value = diary,
-                    onValueChange = { viewModel.updateDiary(it) },
+                    value = letterText,
+                    onValueChange = { viewModel.updateContent(it) },
                     placeholder = {
                         Text(
                             text = "내일의 나에게 보낼 편지",
@@ -161,11 +152,7 @@ fun LetterToTomorrowScreen(
 
             Button(
             onClick = {
-                viewModel.persistDiary(
-                    content = diary,
-                    sendToFuture = true,
-                    dateMillis = dateMillis
-                )
+                viewModel.persistLetter()
                 navController.navigate(Routes.Home) {
                     popUpTo(Routes.MainHost)
                 }
@@ -177,7 +164,7 @@ fun LetterToTomorrowScreen(
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) { Text("저장하기") }
 
     }

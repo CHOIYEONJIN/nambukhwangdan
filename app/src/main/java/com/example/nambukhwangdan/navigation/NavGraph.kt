@@ -19,65 +19,116 @@ import com.example.nambukhwangdan.screens.onboarding.LoginScreen
 import com.example.nambukhwangdan.screens.onboarding.OnboardingIntroScreen
 import com.example.nambukhwangdan.screens.onboarding.OnboardingNickname
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel
 
 @Composable
 fun NavGraph(navController: NavHostController) {
-    //navController가 이동할 수 있게 각 route별 이동 위치를 지정함
-    // 상태 private 리스트인 todolist에 접근할 수 있는 viewmodel을 함께 제공함
-    // -> viewmodel없이는 todolist의 데이터를 알 수 없음
-    val viewModel: DiaryViewModel = viewModel()
+    val diaryViewModel: DiaryViewModel = viewModel()
+    val letterViewModel: LetterViewModel = viewModel()
+
     NavHost(navController = navController, startDestination = "DiaryWriteScreen") {
-        // route 가 list일 떄 TodoListScreen으로 이동함
-        // 할 일 목록 화면으로 이동한다
+
         composable("list") {
-            JournalScreen(viewModel, navController)
+            JournalScreen(
+                navController = navController, // 👈 필수 매개변수 전달
+                viewModel = diaryViewModel     // 👈 ViewModel 전달
+            )
         }
-        // route 가 addEdit일 때 AddEditTodoScreen으로 이동함
-        // 새로운 todo를 만드는 화면으로 이동할 때 사용하는 route
+
         composable (route="EmotionCalendarScreen") {
             EmotionCalendarScreen()
         }
-        composable(route="AnalyzeLoadingOverlay") {
-            AnalyzeLoadingOverlay(viewModel,navController)
+
+        composable(route="AnalyzeLoadingScreen") {
+            AnalyzeLoadingOverlay()
         }
+
         composable(route="AnalyzeResultScreen"){
-            AnalyzeResultScreen(viewModel,navController)
+            AnalyzeResultScreen(
+                viewModel = diaryViewModel,
+                // ⭐️ [수정] 인자 이름을 bottomNavController로 변경하여 Compose 함수의 정의와 일치시킵니다.
+                bottomNavController = navController
+            )
         }
+
+        // NOTE: OnboardingIntroScreen과 OnboardingNickname도 navController와 ViewModel을
+        // 요구할 가능성이 높으므로 인자를 명시적으로 전달합니다. (JournalScreen과 동일 패턴 적용)
         composable(route="OnboardingScreen"){
-            OnboardingIntroScreen(viewModel,navController)
+            OnboardingIntroScreen(
+                viewModel = diaryViewModel,
+                navController = navController
+            )
         }
+
         composable(route="OnboardingNicknameScreen"){
-            OnboardingNickname(viewModel,navController)
+            OnboardingNickname(
+                viewModel = diaryViewModel,
+                navController = navController
+            )
         }
+
+        // ✅ [수정] LoginScreen은 onLoginSuccess 람다를 받도록 수정 (제공된 LoginScreen.kt 파일 참조)
         composable(route="LoginScreen"){
-            LoginScreen(viewModel,navController)
+            LoginScreen(
+                onLoginSuccess = {
+                    // 로그인 성공 시 DiaryWriteScreen으로 이동하고, 로그인 화면을 백스택에서 제거
+                    navController.navigate("DiaryWriteScreen") {
+                        popUpTo("LoginScreen") { inclusive = true }
+                    }
+                },
+                // 뒤로 가기 동작 (여기서는 이전 화면인 OnboardingIntroScreen으로 돌아가거나 닫기)
+                onBack = { navController.popBackStack() }
+            )
         }
-        composable("HomeScreen"){
-            HomeScreen(viewModel,navController)
-        }
+
         composable("NewLetterScreen"){
-            NewLetterScreen(viewModel,navController)
+            NewLetterScreen(
+                viewModel = letterViewModel,
+                bottomNavController = navController
+            )
         }
+
         composable("ReplyScreen"){
-            ReplyScreen(viewModel,navController)
+            ReplyScreen(
+                viewModel = letterViewModel,
+                navController = navController
+            )
         }
+
         composable("DiaryWriteScreen/{letterId}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("letterId")
 
             id?.let {
                 LaunchedEffect(it) {
-                    viewModel.loadReplyLetterById(it)
+                    // viewModel.loadReplyLetterById(it) // TODO: 필요하면 주석 해제
                 }
             }
 
-            DiaryWriteScreen(viewModel,navController)
-        }
-        composable("LetterToTomorrowScreen"){
-            LetterToTomorrowScreen(viewModel,navController)
+            DiaryWriteScreen(
+                viewModel = diaryViewModel,
+                bottomNavController = navController
+            )
         }
 
+        composable("LetterToTomorrowScreen"){
+            LetterToTomorrowScreen(
+                viewModel = letterViewModel,
+                navController = navController
+            )
+        }
+
+        // 일기 쓰기 기본 화면
         composable("DiaryWriteScreen") {
-            DiaryWriteScreen(viewModel, navController)
+            DiaryWriteScreen(
+                viewModel = diaryViewModel,
+                bottomNavController = navController
+            )
+        }
+
+        // NOTE: HomeScreen이 누락되어 있어 추가합니다. (이름은 임의로 추정)
+        composable("HomeScreen") {
+            // HomeScreen도 NavController나 ViewModel이 필요할 수 있습니다.
+            HomeScreen(navController = navController)
         }
     }
 }

@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
 import com.example.nambukhwangdan.ui.theme.Primary
@@ -361,6 +361,7 @@ fun DiaryItem(
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
+    // ✅ 충돌 해결: diary.createdAt 기반으로 날짜 정보 생성
     val displayMonthAndDay = Instant.ofEpochMilli(diary.createdAt)
         .atZone(ZoneId.systemDefault())
         .toLocalDate()
@@ -384,7 +385,7 @@ fun DiaryItem(
             horizontalAlignment = Alignment.Start
         ) {
 
-            // ⭐️ 접힌 상태 Row
+            // ⭐️ 접힌 상태 Row (충돌 없음)
             if (!isExpanded) {
                 Row(
                     modifier = Modifier
@@ -474,19 +475,27 @@ fun DiaryItem(
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    // 1. 헤더 (날짜 및 수정/삭제 아이콘)
+                    // 1. 헤더 (날짜 및 수정/삭제 아이콘 + 감정 배지 통합)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // ⭐️ 'n월 n일 의 나에게서 온 편지' 텍스트
-                        Text(
-                            text = "$displayMonthAndDay 의 나에게서 온 편지",
-                            fontFamily = pretendard,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        // ⭐️ 'n월 n일 의 일기' 텍스트 + 감정 배지
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "$displayMonthAndDay 의 일기",
+                                fontFamily = pretendard,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            // 감정 배지 통합
+                            diary.sentimentLabel?.let { label ->
+                                Spacer(modifier = Modifier.width(8.dp))
+                                SentimentBadge(label)
+                            }
+                        }
+
                         // ⭐️ 수정 및 삭제 아이콘
                         Row {
                             Icon(
@@ -514,25 +523,28 @@ fun DiaryItem(
                     // 2. 원본 편지 내용 (어제 편지)
                     Text(
                         // ⭐️ 실제 원본 편지 내용을 표시합니다.
-                        text = originalLetterContent,
+                        text = "원본 편지: ${originalLetterContent}",
                         fontFamily = pretendard,
-                        fontSize = 15.sp,
-                        color = Color.Black
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // 3. 사진 Placeholder 3개 (이 부분은 필요에 따라 실제 로직으로 변경해야 합니다.)
+                    // 3. 사진 Placeholder 3개 (실제 로직으로 변경 필요)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         repeat(3) {
                             Box(
                                 modifier = Modifier
-                                    .size(100.dp)
+                                    .size(80.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Grey.copy(alpha = 0.2f)),
+                                    .background(Grey.copy(alpha = 0.2f))
+                                    .weight(1f),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("Photo $it", color = Grey)
@@ -559,6 +571,24 @@ fun DiaryItem(
     }
 }
 
+
+
+@Composable
+private fun SentimentBadge(label: String) {
+    val color = when (label.lowercase()) {
+        "positive", "긍정" -> Primary
+        "negative", "부정" -> Color(0xFFF44336)
+        else -> Color(0xFFFFC107)
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.15f))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(text = label, color = color, fontSize = 10.sp)
+    }
+}
 // --- 유틸리티 함수 (날짜 포매팅) ---
 @RequiresApi(Build.VERSION_CODES.O)
 private fun Long.dayLabelForInbox(): String {

@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
+import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
@@ -76,12 +77,21 @@ fun AnalyzeResultScreen(
         "중립" to Color(0xFFFFC107),   // 노랑 (중립)
         "부정" to Color(0xFFF44336)    // 빨강 (부정)
     )
-    val pastLetters by viewModel.pastLetters.collectAsState()
+
+    // Firestore에서 감정 결과 수신
+    val detectedSentiment by viewModel.detectedSentiment.collectAsState()
+
+    // ⭐️ 오류 수정: pastDiaries 대신 ViewModel에 정의된 allDiaries를 사용합니다.
+    // 이는 모든 일기 기록 목록이며, StateFlow이므로 초기값 없이 collectAsState()를 사용할 수 있습니다.
+    val pastLetters by viewModel.allDiaries.collectAsState()
+
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
+
     val replyToId by viewModel.replyToId.collectAsState()
-    val replyLetter = pastLetters.find { it.id == replyToId }
+    // replyLetter는 현재 로컬에서는 찾을 필요가 없으므로 주석 처리하거나, 필요하다면 Diary 모델을 import 해야 합니다.
+    // val replyLetter = pastLetters.find { it.id == replyToId }
 
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
@@ -99,11 +109,13 @@ fun AnalyzeResultScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
-    val detected by viewModel.detectedEmotion.collectAsState()
+    // 이전에 중복으로 collectAsState를 사용하던 부분을 제거하고 'detectedSentiment' 변수를 사용
     val selectedEmotion by viewModel.selectedEmotion.collectAsState()
     val selectedSticker by viewModel.selectedSticker.collectAsState()
     val emotionCats = listOf("긍정", "중립", "부정")
-    val safeEmotion = selectedEmotion ?: detected ?: "기쁨"  //기본값
+
+
+    val safeEmotion = selectedEmotion ?: detectedSentiment ?: "기쁨"
 
     val detailStickers = remember(safeEmotion) {
         when (safeEmotion) {
@@ -160,7 +172,7 @@ fun AnalyzeResultScreen(
                             .width(24.dp)
                             .height(10.dp)
                             .background(
-                                color = Variables.Color5,
+                                color = Primary,
                                 shape = RoundedCornerShape(999.dp)
                             )
                     )
@@ -197,24 +209,30 @@ fun AnalyzeResultScreen(
                     }
                 }
 
-                    // 감정 목록
+                // 감정 목록
                 item {
                     Spacer(Modifier.height(12.dp))
                     Column(
                         modifier = Modifier
-                                .padding(horizontal = 30.dp)
-                                .shadow(4.dp, RoundedCornerShape(10.dp))
-                                .fillMaxWidth()
-                                .background(Surface, RoundedCornerShape(10.dp))
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                        LaunchedEffect(Unit) {
-                            if (selectedEmotion == null) {   // 이미 선택되어 있으면 덮어쓰지 않음
-                                viewModel.chooseEmotion(detected ?: "분석중")
+                            .padding(horizontal = 30.dp)
+                            .shadow(4.dp, RoundedCornerShape(10.dp))
+                            .fillMaxWidth()
+                            .background(Surface, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LaunchedEffect(detectedSentiment) {
+                            // detectedSentiment가 null이 아니고, selectedEmotion이 아직 선택되지 않았을 때
+                            if (detectedSentiment != null && selectedEmotion == null) {
+                                // detectedSentiment는 String? 타입이지만, if문 내부에서는 String 타입이 보장됨
+                                viewModel.chooseEmotion(detectedSentiment!!)
                             }
                         }
-                        Text("오늘의 감정은?  ${selectedEmotion ?: detected}", fontWeight = FontWeight.Medium)
+                        Text(
+                            // null 체크를 통해 "분석 중..." 또는 감정 표시
+                            text = "오늘의 감정은: ${selectedEmotion ?: detectedSentiment ?: "분석 중..."}",
+                            fontWeight = FontWeight.Medium
+                        )
 
                         Text("감정 분류 선택", fontWeight = FontWeight.Bold)
                         LazyRow(
@@ -225,7 +243,8 @@ fun AnalyzeResultScreen(
                         ) {
                             items(emotionCats.size) { i ->
                                 val label = emotionCats[i]
-                                val isSelected = (selectedEmotion ?: detected) == label
+                                // detectedSentiment와 selectedEmotion 중 하나를 기준으로 선택 상태 결정
+                                val isSelected = (selectedEmotion ?: detectedSentiment) == label
                                 val bgColor = emotionColors[label] ?: Color.LightGray
 
                                 EmotionCircleButton(
@@ -269,10 +288,7 @@ fun AnalyzeResultScreen(
         // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistDiary(
-                    content = diary,
-                    dateMillis = dateMillis
-                )
+                viewModel.resetDetectedSentiment() // 다음 화면으로 넘어가기 전 분석 결과 초기화 (선택적)
                 bottomNavController.navigate(Routes.LetterToTomorrow)
             },
             modifier = Modifier
@@ -281,7 +297,7 @@ fun AnalyzeResultScreen(
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
             Text(
                 "다음으로",
@@ -335,9 +351,9 @@ fun AnalyzeResultScreen(
                                 containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black,
-                                selectedDayContainerColor = Variables.Color5,
+                                selectedDayContainerColor = Primary,
                                 selectedDayContentColor = Color.White,
-                                todayContentColor = Variables.Color5
+                                todayContentColor = Primary
                             )
                         )
 
@@ -350,7 +366,7 @@ fun AnalyzeResultScreen(
                             Button(
                                 onClick = { showCalendar = false },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("취소", color = Color.White) }
 
                             Button(
@@ -361,7 +377,7 @@ fun AnalyzeResultScreen(
                                     showCalendar = false
                                 },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("확인", color = Color.White) }
                         }
                     }
