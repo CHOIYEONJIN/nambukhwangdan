@@ -65,7 +65,6 @@ fun EmotionCalendarScreen(
 ) {
 
     LaunchedEffect(Unit) {
-        letterViewModel.syncLettersFromFirestore()
         diaryViewModel.syncDiaries()
     }
     // 🔹 오늘 날짜 기준

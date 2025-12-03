@@ -15,7 +15,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,15 +31,8 @@ fun ReplyScreen(
     viewModel: LetterViewModel,
     navController: NavController
 ) {
-    // 📌 Firestore에서 편지 최신화 (화면 열릴 때 한 번만 실행)
-    LaunchedEffect(Unit) {
-        viewModel.syncLettersFromFirestore()
-    }
-
-    // 🔹 pastLetters → allLetters로 변경
     val pastLetters = viewModel.allLetters.collectAsState().value
     val content by viewModel.letterContent.collectAsState()
-    val replyToId by viewModel.replyToDiaryId.collectAsState()
 
     Box(
         modifier = Modifier
@@ -54,14 +46,9 @@ fun ReplyScreen(
         ) {
 
             // 🔹 답장 대상 편지 표시
-            replyToId?.let { targetId ->
-                val targetLetter = pastLetters.find { it.id == targetId }
-
-                targetLetter?.let { letter ->
-                    Text("${formatDate(letter.createdAt)}의 ${letter.receiverName}에게서 온 편지")
-
-                    ExpandableDiaryCard(letter.content)   // UI 유지 🍀
-                }
+            pastLetters.firstOrNull()?.let { letter ->
+                Text("${formatDate(letter.createdAt)}의 ${letter.receiverName ?: "익명"}에게서 온 편지")
+                ExpandableDiaryCard(letter.content)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -81,8 +68,9 @@ fun ReplyScreen(
         // 🔹 전송 버튼
         Button(
             onClick = {
-                viewModel.persistLetter()  // 저장
-                navController.popBackStack()  // 이전 화면으로
+                viewModel.sendLetter {
+                    navController.popBackStack()
+                }
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)

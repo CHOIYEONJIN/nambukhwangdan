@@ -8,10 +8,15 @@ data class LetterEntity(
     @PrimaryKey val id: String,
     val content: String,
     val createdAt: Long,
-    val nickname: String,
+    val updatedAt: Long,
+    val scheduledAt: Long,
+    val deliveredAt: Long?,
+    val senderId: String,
+    val senderName: String,
+    val receiverId: String?,
+    val receiverName: String?,
+    val anonymous: Boolean,
     val replyToId: String?,
-    val liked: Boolean = false,
-    val date: Long,
-    val receiverName: String,         // 미래의 나 or 랜덤 인물
-    val userId:String
-    )
+    val liked: Boolean,
+    val inboxPath: String?
+)

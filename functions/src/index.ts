@@ -5,6 +5,14 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import axios from "axios";
 import * as logger from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import * as admin from "firebase-admin";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
+
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+const db = getFirestore();
 
 // ------------------------
 // 📌 SECRET 정의 (🔥 함수 밖에서 선언해야 함 ❗)
@@ -148,3 +156,41 @@ export const analyzeSentimentV2 = onDocumentCreated(
     }
   }
 );
+
+export const deliverScheduledLetters = onSchedule("every 5 minutes", async () => {
+  const now = Date.now();
+  const snapshot = await db
+    .collection("letters")
+    .where("deliveredAt", "==", null)
+    .where("scheduledAt", "<=", now)
+    .limit(50)
+    .get();
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const receiverId: string | undefined = data.receiverId;
+    const senderId: string | undefined = data.senderId;
+    if (!receiverId) {
+      logger.warn(`Skipping letter ${doc.id} - missing receiverId`);
+      continue;
+    }
+
+    const payload = {
+      ...data,
+      deliveredAt: FieldValue.serverTimestamp(),
+      inboxPath: `users/${receiverId}/inbox/${doc.id}`,
+      senderId: data.anonymous ? "" : senderId,
+      senderName: data.anonymous ? "익명" : data.senderName,
+    };
+
+    await db.doc(`users/${receiverId}/inbox/${doc.id}`).set(payload, { merge: true });
+
+    if (senderId) {
+      await db
+        .doc(`users/${senderId}/letters/${doc.id}`)
+        .set(payload, { merge: true });
+    }
+
+    await doc.ref.update({ deliveredAt: FieldValue.serverTimestamp() });
+  }
+});

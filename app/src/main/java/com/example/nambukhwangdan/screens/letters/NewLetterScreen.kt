@@ -1,7 +1,6 @@
 package com.example.nambukhwangdan.screens.letters
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,7 +28,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,52 +49,50 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel.ReceiverOption
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-
 @SuppressLint("RememberReturnType")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewLetterScreen(
-    viewModel: LetterViewModel= hiltViewModel(),
+    viewModel: LetterViewModel = hiltViewModel(),
     bottomNavController: NavController
 ) {
-
-    LaunchedEffect(Unit) {
-        viewModel.updateContent("")   // 항상 입력 칸을 빈칸
-    }
-    var showReceiverDialog by remember { mutableStateOf(false) }
     val letterText by viewModel.letterContent.collectAsState()
-    val dateMillis by viewModel.selectedDateMillis.collectAsState()
-    val todayMillis = System.currentTimeMillis()
     val receiverName by viewModel.receiverName.collectAsState()
+    val dateMillis by viewModel.selectedDateMillis.collectAsState()
+    val receiverOption by viewModel.receiverOption.collectAsState()
+    val scheduledAt by viewModel.scheduledAt.collectAsState()
+    val selectedHour by viewModel.selectedHour.collectAsState()
+    val selectedMinute by viewModel.selectedMinute.collectAsState()
 
-    // ✅ Compose 내장 DatePicker 상태
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = todayMillis
-    )
-    val pickedMillis = datePickerState.selectedDateMillis ?: todayMillis
-    val headlineStr = remember(pickedMillis) {
-        SimpleDateFormat("yyyy년 M월 d일", Locale.KOREA)
-            .format(Date(pickedMillis))
-    }
-
-    // ✅ 달력 팝업 표시 여부
+    var showReceiverDialog by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
-    val dateStr = remember(dateMillis) {
-        SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = dateMillis)
+    val timePickerState = rememberTimePickerState(initialHour = selectedHour, initialMinute = selectedMinute, is24Hour = true)
+
+    LaunchedEffect(datePickerState.selectedDateMillis) {
+        datePickerState.selectedDateMillis?.let { viewModel.setSelectedDate(it) }
     }
+
+    LaunchedEffect(selectedHour, selectedMinute) {
+        timePickerState.hour = selectedHour
+        timePickerState.minute = selectedMinute
+    }
+
     LaunchedEffect(Unit) {
         val calendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 1)
@@ -102,22 +100,24 @@ fun NewLetterScreen(
             set(Calendar.MINUTE, 0)
         }
         viewModel.setSelectedDate(calendar.timeInMillis)
+        viewModel.setSelectedTime(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
     }
 
+    val dateFormatter = remember { SimpleDateFormat("yyyy년 M월 d일", Locale.KOREA) }
+    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.KOREA) }
+    val scheduleText = remember(scheduledAt) { dateFormatter.format(Date(scheduledAt)) + " " + timeFormatter.format(Date(scheduledAt)) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(color = Variables.Color4)
     ) {
-        // 🔹 메인 컨텐츠
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 120.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 상단 날짜 + indicator
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -125,12 +125,9 @@ fun NewLetterScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(dateStr)
-                }
+                Text(scheduleText)
             }
 
-            // 🔹 LazyColumn (본문)
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -138,29 +135,36 @@ fun NewLetterScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                //편지 전송 날짜 및 발신인 선택
                 item {
                     Column(
                         modifier = Modifier
                             .padding(horizontal = 20.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .fillMaxWidth().background(Surface, RoundedCornerShape(10.dp))
+                            .fillMaxWidth()
+                            .background(Surface, RoundedCornerShape(10.dp))
                             .padding(horizontal = 20.dp, vertical = 10.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        )
-                    {
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start
                         ) {
                             Text(
-                                text = "${formatDate(dateMillis)} 23:00 의 ",
+                                text = "${scheduleText} 에 ",
                                 fontSize = 13.sp,
-                                color = Primary,                 // 강조 색
-                                fontWeight = FontWeight.SemiBold,         // 글자 강조
+                                color = Primary,
+                                fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier
                                     .clickable { showCalendar = true }
-                                    .padding(2.dp)                        // 클릭 영역 확대
+                                    .padding(2.dp)
+                            )
+                            Text(
+                                text = "시간 변경",
+                                fontSize = 12.sp,
+                                color = Primary,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .clickable { showTimePicker = true }
                             )
                             Text(
                                 text = receiverName,
@@ -168,55 +172,48 @@ fun NewLetterScreen(
                                 fontSize = 13.sp,
                                 modifier = Modifier.clickable { showReceiverDialog = true }
                             )
-
                             Text(text = "에게 보낼 편지", fontSize = 13.sp)
                         }
-                        }
-                        if (showReceiverDialog) {
-                            Dialog(onDismissRequest = { showReceiverDialog = false }) {
-                                Card(
-                                    shape = RoundedCornerShape(16.dp),
-                                    modifier = Modifier.padding(20.dp)
+                    }
+
+                    if (showReceiverDialog) {
+                        Dialog(onDismissRequest = { showReceiverDialog = false }) {
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.padding(20.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    horizontalAlignment = Alignment.Start
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(20.dp),
-                                        horizontalAlignment = Alignment.Start
-                                    ) {
-                                        Text("받을 사람을 선택해 주세요")
-
-                                        Spacer(Modifier.height(12.dp))
-
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            RadioButton(
-                                                selected = (receiverName == "미래의 나"),
-                                                onClick = {
-                                                    viewModel.setReceiver("미래의 나")
-                                                    showReceiverDialog = false
-                                                }
-                                            )
-                                            Text("미래의 나")
-                                        }
-
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            RadioButton(
-                                                selected = (receiverName == "익명의 누군가"),
-                                                onClick = {
-                                                    viewModel.setReceiver("익명의 누군가")
-                                                    showReceiverDialog = false
-                                                }
-                                            )
-                                            Text("익명의 누군가")
-                                        }
+                                    Text("받을 사람을 선택해 주세요")
+                                    Spacer(Modifier.height(12.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = (receiverOption == ReceiverOption.FUTURE_SELF),
+                                            onClick = {
+                                                viewModel.setReceiver(ReceiverOption.FUTURE_SELF)
+                                                showReceiverDialog = false
+                                            }
+                                        )
+                                        Text("미래의 나")
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = (receiverOption == ReceiverOption.RANDOM_ANONYMOUS),
+                                            onClick = {
+                                                viewModel.setReceiver(ReceiverOption.RANDOM_ANONYMOUS)
+                                                showReceiverDialog = false
+                                            }
+                                        )
+                                        Text("익명의 누군가(Anonymous Someone)")
                                     }
                                 }
                             }
                         }
-
                     }
+                }
 
-
-
-                // 오늘의 일기 작성 박스
                 item {
                     Spacer(Modifier.height(12.dp))
                     Column(
@@ -261,33 +258,18 @@ fun NewLetterScreen(
                                 unfocusedPlaceholderColor = Color.Black
                             )
                         )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp, bottom = 4.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val isAnonymous by viewModel.isAnonymous.collectAsState()
-                            Checkbox(
-                                checked = isAnonymous,
-                                onCheckedChange = { viewModel.onAnonymousCheckedChange(it) }
-                            )
-                            Text(text = "익명", fontSize = 12.sp)
-                        }
-
                     }
                 }
             }
         }
 
-        // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistLetter()
-                bottomNavController.navigate(Routes.Home) {
-                    popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
-                    launchSingleTop = true                          // ← 중복 생성 방지
+                viewModel.sendLetter {
+                    bottomNavController.navigate(Routes.Home) {
+                        popUpTo(Routes.NewLetter) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             },
             modifier = Modifier
@@ -300,16 +282,12 @@ fun NewLetterScreen(
         ) {
             Text("저장하기", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         }
-        Log.d("LetterSaved", "saved letter = $letterText")
 
-
-        // 달력 팝업 구현 부분
-        //TODO: Timepicker 구현해야함
         if (showCalendar) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),// 기존 화면에 투명도 50의 검은 색 레이어를 씌움
+                    .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 Card(
@@ -325,6 +303,10 @@ fun NewLetterScreen(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val headlineStr = remember(datePickerState.selectedDateMillis) {
+                            val millis = datePickerState.selectedDateMillis ?: dateMillis
+                            dateFormatter.format(Date(millis))
+                        }
                         Text(
                             text = "어떤 날의 기록인가요?",
                             fontWeight = FontWeight.SemiBold,
@@ -337,7 +319,7 @@ fun NewLetterScreen(
                         DatePicker(
                             state = datePickerState,
                             title = null,
-                            headline = {                   // 선택한 날짜 크게 보여주는 부분
+                            headline = {
                                 Text(
                                     text = headlineStr,
                                     fontWeight = FontWeight.SemiBold,
@@ -349,7 +331,7 @@ fun NewLetterScreen(
                             colors = DatePickerDefaults.colors(
                                 containerColor = Surface,
                                 titleContentColor = Variables.Color4,
-                                weekdayContentColor = Color.Black ,
+                                weekdayContentColor = Color.Black,
                                 selectedDayContainerColor = Primary,
                                 selectedDayContentColor = Color.White,
                                 todayContentColor = Primary
@@ -357,34 +339,52 @@ fun NewLetterScreen(
                         )
 
                         Spacer(Modifier.height(16.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Button(
+                            onClick = {
+                                showCalendar = false
+                                viewModel.setSelectedDate(datePickerState.selectedDateMillis ?: dateMillis)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
-                            Button(
-                                onClick = { showCalendar = false },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor =Primary)
-                            ) { Text("취소", color = Color.White) }
-
-                            Button(
-                                onClick = {
-                                    datePickerState.selectedDateMillis?.let {
-                                        viewModel.setSelectedDate(it)
-                                    }
-                                    showCalendar = false
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                            ) { Text("확인", color = Color.White) }
+                            Text("확인", color = Color.White)
                         }
+                    }
+                }
+            }
+        }
+
+        if (showTimePicker) {
+            Dialog(onDismissRequest = { showTimePicker = false }) {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        TimePicker(state = timePickerState)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                viewModel.setSelectedTime(timePickerState.hour, timePickerState.minute)
+                                showTimePicker = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) { Text("확인", color = Color.White) }
                     }
                 }
             }
         }
     }
 }
+
+fun formatDate(time: Long): String {
+    val sdf = SimpleDateFormat("yyyy년 M월 d일", Locale.getDefault())
+    return sdf.format(Date(time))
+}
+
 @Composable
 fun ExpandableDiaryCard(content: String) {
     var expanded by remember { mutableStateOf(false) }
@@ -414,9 +414,4 @@ fun ExpandableDiaryCard(content: String) {
             )
         }
     }
-}
-//createdAt이 밀리초 단위로 저장되어있기 때문에 사람이 읽을 수 있는 형식의 날짜로 변환시켜주는 함수
-fun formatDate(time: Long): String {
-    val sdf = SimpleDateFormat("yyyy년 M월 d일", Locale.getDefault())
-    return sdf.format(Date(time))
 }

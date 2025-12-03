@@ -5,132 +5,127 @@ import androidx.lifecycle.viewModelScope
 import com.example.nambukhwangdan.data.repository.LetterRepository
 import com.example.nambukhwangdan.model.Letter.Letter
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class LetterViewModel @Inject constructor(
-    private val repo: LetterRepository,
-    private val firestore: FirebaseFirestore
+    private val repo: LetterRepository
 ) : ViewModel() {
 
-    // --- UI 입력 상태 ---
+    enum class ReceiverOption { FUTURE_SELF, RANDOM_ANONYMOUS }
+
+    private val auth = FirebaseAuth.getInstance()
+    private val userId: String?
+        get() = auth.currentUser?.uid
+
     val letterContent = MutableStateFlow("")
-    val receiverName = MutableStateFlow("미래의 나")
-    val replyToDiaryId = MutableStateFlow<String?>(null)
+    private val _receiverOption = MutableStateFlow(ReceiverOption.FUTURE_SELF)
+    val receiverOption = _receiverOption
 
-    private val _isAnonymous = MutableStateFlow(false)
-    val isAnonymous = _isAnonymous.asStateFlow()
+    private val _selectedDateMillis = MutableStateFlow(System.currentTimeMillis())
+    val selectedDateMillis = _selectedDateMillis
 
-    private val userNickname = "닉네임" // 실제 로그인 정보에서 가져올 예정 (임시)
-    private val _nicknameToUse = MutableStateFlow(userNickname)
-    val nicknameToUse = _nicknameToUse.asStateFlow()
+    private val _selectedHour = MutableStateFlow(23)
+    private val _selectedMinute = MutableStateFlow(0)
+    val selectedHour = _selectedHour
+    val selectedMinute = _selectedMinute
 
-    fun onAnonymousCheckedChange(newValue: Boolean) {
-        _isAnonymous.value = newValue
-        _nicknameToUse.value = if (newValue) "익명" else userNickname
+    val scheduledAt = combine(_selectedDateMillis, _selectedHour, _selectedMinute) { date, hour, minute ->
+        val dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(date), ZoneId.systemDefault())
+            .withHour(hour)
+            .withMinute(minute)
+            .withSecond(0)
+            .withNano(0)
+        dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, System.currentTimeMillis())
+
+    private val _sendInProgress = MutableStateFlow(false)
+    val sendInProgress = _sendInProgress
+
+    val receiverName = receiverOption.combine(scheduledAt) { option, _ ->
+        when (option) {
+            ReceiverOption.FUTURE_SELF -> "미래의 나"
+            ReceiverOption.RANDOM_ANONYMOUS -> "익명의 누군가"
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, "미래의 나")
+
+    val allLetters = repo.observeLetters()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        repo.startSync()
     }
-    val replyToId = MutableStateFlow<String?>(null)
-
-    fun setReplyToId(id: String) {
-        replyToId.value = id
-    }
-    // 받는 사람 이름 상태
 
     fun updateContent(text: String) {
         letterContent.value = text
     }
 
-    fun setReceiver(name: String) {
-        receiverName.value = name
+    fun setReceiver(option: ReceiverOption) {
+        _receiverOption.value = option
     }
 
-    fun setReplyToDiaryId(id: String?) {
-        replyToDiaryId.value = id
+    fun setSelectedDate(millis: Long) {
+        _selectedDateMillis.value = millis
     }
 
-    // --- Firestore 저장 ---
-    fun persistLetter(): String {
-        val letterId = UUID.randomUUID().toString()
+    fun setSelectedTime(hour: Int, minute: Int) {
+        _selectedHour.value = hour
+        _selectedMinute.value = minute
+    }
+
+    fun sendLetter(onComplete: (String) -> Unit = {}) {
         val now = System.currentTimeMillis()
-
-        val letter = Letter(
-            id = letterId,
+        val scheduledAtValue = scheduledAt.value
+        val baseLetter = Letter(
+            id = UUID.randomUUID().toString(),
             content = letterContent.value,
-            receiverName = receiverName.value,
-            replyToId = replyToDiaryId.value,
             createdAt = now,
-            date = selectedDateMillis.value,
-            userId = userId ?: ""
+            updatedAt = now,
+            scheduledAt = scheduledAtValue,
+            senderId = userId ?: "",
+            senderName = auth.currentUser?.displayName ?: "익명",
+            replyToId = null,
+            anonymous = _receiverOption.value == ReceiverOption.RANDOM_ANONYMOUS
         )
 
         viewModelScope.launch {
-            repo.insertLetter(letter)
-            val uid = userId          // 🔥 여기서 다시 한 번 안전 체크
-            if (uid != null) {// ← 🔥 DB(Room)에 저장
-            repo.saveLetterToFirestore(letter,uid)    }      // ← 🔥 Firestore에도 저장
-        }
-
-        clearStates()
-        return letterId
-    }
-
-    private fun clearStates() {
-        letterContent.value = ""
-        receiverName.value = "미래의 나"
-        replyToDiaryId.value = null
-    }
-    val selectedDateMillis = MutableStateFlow(System.currentTimeMillis())
-    fun setSelectedDate(millis: Long) { selectedDateMillis.value = millis }
-    val allLetters = repo.getAllLetters()
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            emptyList<Letter>()
-        )
-
-    fun deleteLetter(id: String) = viewModelScope.launch {
-        repo.deleteLetter(id)
-        val uid = userId          // 🔥 여기서 다시 한 번 안전 체크
-        if (uid != null) {
-        repo.deleteLetterFromFirestore(id,uid)}
-
-    }
-
-    fun toggleLike(id: String) = viewModelScope.launch {
-        repo.toggleLike(id)
-    }
-    private val auth = FirebaseAuth.getInstance()
-    private val userId: String?
-        get() = auth.currentUser?.uid
-
-
-
-    fun syncLettersFromFirestore() {
-        val uid = userId          // 🔥 여기서 다시 한 번 안전 체크
-        if (uid != null) {
-        firestore.collection("users")
-            .document(uid)
-            .collection("letters")
-            .addSnapshotListener { snapshot, _ ->
-                if (snapshot != null) {
-                    viewModelScope.launch {
-                        for (doc in snapshot.documents) {
-                            val letter = doc.toObject(Letter::class.java)
-                            if (letter != null) repo.insertLetter(letter)
-                        }
+            _sendInProgress.value = true
+            try {
+                if (_receiverOption.value == ReceiverOption.RANDOM_ANONYMOUS) {
+                    val id = repo.scheduleAnonymousDelivery(baseLetter)
+                    if (id == null) {
+                        _sendInProgress.value = false
+                        return@launch
                     }
+                } else {
+                    repo.sendScheduledLetterToSelf(baseLetter)
                 }
+                onComplete(baseLetter.id)
+                clearStates()
+            } finally {
+                _sendInProgress.value = false
             }
         }
     }
 
+    fun toggleLike(id: String) = viewModelScope.launch { repo.toggleLike(id) }
 
+    fun deleteLetter(id: String) = viewModelScope.launch { repo.deleteLetter(id) }
+
+    private fun clearStates() {
+        letterContent.value = ""
+        _receiverOption.value = ReceiverOption.FUTURE_SELF
+        _selectedHour.value = 23
+        _selectedMinute.value = 0
+    }
 }

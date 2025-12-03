@@ -152,11 +152,12 @@ fun LetterToTomorrowScreen(
 
             Button(
             onClick = {
-                viewModel.persistLetter()
-                navController.navigate(Routes.Home) {
-                    popUpTo(Routes.MainHost)
+                viewModel.sendLetter {
+                    navController.navigate(Routes.Home) {
+                        popUpTo(Routes.MainHost)
+                    }
+                    navController.popBackStack(route = "diaryWrite", inclusive = false)
                 }
-                navController.popBackStack(route = "diaryWrite", inclusive = false)
             },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)

@@ -1,6 +1,7 @@
 package com.example.nambukhwangdan.data.repository
 
 import com.example.nambukhwangdan.data.local.DiaryDao
+import com.example.nambukhwangdan.data.util.NetworkMonitor
 import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.model.Diary.toDiary
 import com.example.nambukhwangdan.model.Diary.toEntity
@@ -10,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -19,7 +21,8 @@ import javax.inject.Singleton
 @Singleton
 class DiaryRepository @Inject constructor(
     private val diaryDao: DiaryDao,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val networkMonitor: NetworkMonitor
 ) {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
@@ -54,7 +57,9 @@ class DiaryRepository @Inject constructor(
         val updated = target.copy(liked = !target.liked, updatedAt = System.currentTimeMillis())
         diaryDao.insertDiary(updated.toEntity())
         auth.currentUser?.uid?.let { uid ->
-            saveDiaryToFirestore(updated, uid)
+            if (canSync()) {
+                saveDiaryToFirestore(updated, uid)
+            }
         }
     }
 
@@ -65,6 +70,7 @@ class DiaryRepository @Inject constructor(
 
     suspend fun saveDiaryToFirestore(diary: Diary, userId: String? = auth.currentUser?.uid): Boolean = try {
         val uid = userId ?: return false
+        if (!canSync()) return false
         userCollection(uid)
             .document(diary.id)
             .set(diary.toFirestoreMap())
@@ -73,6 +79,7 @@ class DiaryRepository @Inject constructor(
     } catch (e: Exception) { false }
 
     suspend fun saveDiaryForAnalysis(diary: Diary): Boolean = try {
+        if (!canSync()) return false
         firestore.collection("diary_entries")
             .document(diary.id)
             .set(
@@ -88,6 +95,7 @@ class DiaryRepository @Inject constructor(
 
     suspend fun deleteDiaryFromFirestore(id: String, userId: String? = auth.currentUser?.uid): Boolean = try {
         val uid = userId ?: return false
+        if (!canSync()) return false
         userCollection(uid)
             .document(id)
             .delete()
@@ -99,6 +107,7 @@ class DiaryRepository @Inject constructor(
 
     fun observeRemoteDiaries(): Flow<List<Diary>> {
         val uid = auth.currentUser?.uid ?: return flowOf(emptyList())
+        if (!canSync()) return flowOf(emptyList())
         return callbackFlow {
             val registration = userCollection(uid)
                 .addSnapshotListener { snapshot, _ ->
@@ -111,6 +120,7 @@ class DiaryRepository @Inject constructor(
 
     suspend fun syncDiaries() {
         val uid = auth.currentUser?.uid ?: return
+        if (!canSync()) return
         val remoteSnapshot = userCollection(uid).get().await()
         val remoteDiaries = remoteSnapshot.documents.mapNotNull { it.toDiarySafe() }
         val localDiaries = diaryDao.getAllDiariesOnce().map { it.toDiary() }
@@ -160,6 +170,8 @@ class DiaryRepository @Inject constructor(
             list.map { it.toDiary() }
         }
     }
+
+    private suspend fun canSync(): Boolean = networkMonitor.isOnline.first()
 
     private fun Diary.toFirestoreMap(): Map<String, Any?> = mapOf(
         "id" to id,

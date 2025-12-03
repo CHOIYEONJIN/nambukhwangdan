@@ -5,6 +5,9 @@ import androidx.room.Room
 import com.example.nambukhwangdan.data.local.AppDatabase
 import com.example.nambukhwangdan.data.local.DiaryDao
 import com.example.nambukhwangdan.data.local.LetterDao
+import com.example.nambukhwangdan.data.repository.DiaryRepository
+import com.example.nambukhwangdan.data.repository.LetterRepository
+import com.example.nambukhwangdan.data.util.NetworkMonitor
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
@@ -40,5 +43,26 @@ object AppModule {
     @Singleton
     fun provideLetterDao(appDatabase: AppDatabase): LetterDao =
         appDatabase.letterDao()
+
+    @Provides
+    @Singleton
+    fun provideNetworkMonitor(@ApplicationContext context: Context): NetworkMonitor =
+        NetworkMonitor(context)
+
+    @Provides
+    @Singleton
+    fun provideDiaryRepository(
+        diaryDao: DiaryDao,
+        firestore: FirebaseFirestore,
+        networkMonitor: NetworkMonitor
+    ): DiaryRepository = DiaryRepository(diaryDao, firestore, networkMonitor)
+
+    @Provides
+    @Singleton
+    fun provideLetterRepository(
+        firestore: FirebaseFirestore,
+        letterDao: LetterDao,
+        networkMonitor: NetworkMonitor
+    ): LetterRepository = LetterRepository(firestore, letterDao, networkMonitor)
 }
 
