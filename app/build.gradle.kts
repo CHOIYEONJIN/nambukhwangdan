@@ -115,6 +115,9 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.identity.googleid)
 
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended) 
+
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)

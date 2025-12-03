@@ -91,7 +91,90 @@ fun ReplyScreen(
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
-            Text("답장 보내기", color = Color.White)
+            Text("다음으로", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        }
+        if (viewModel.isAnalyzing) {
+            AnalyzeLoadingOverlay(viewModel, bottomNavController)   // ← Overlay 컴포저블 호출
+        }
+
+        // 달력 팝업 구현 부분
+        if (showCalendar) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),// 기존 화면에 투명도 50의 검은 색 레이어를 씌움
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .padding(horizontal = 10.dp, vertical = 10.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "어떤 날의 기록인가요?",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp,
+                            color = Color.Black
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        DatePicker(
+                            state = datePickerState,
+                            title = null,
+                            headline = {                   // 선택한 날짜 크게 보여주는 부분
+                                Text(
+                                    text = headlineStr,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 18.sp,
+                                    color = Color.Black
+                                )
+                            },
+                            showModeToggle = false,
+                            colors = DatePickerDefaults.colors(
+                                containerColor = Surface,
+                                titleContentColor = Variables.Color4,
+                                weekdayContentColor = Color.Black ,
+                                selectedDayContainerColor = Variables.Color5,
+                                selectedDayContentColor = Color.White,
+                                todayContentColor = Variables.Color5
+                            )
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = { showCalendar = false },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                            ) { Text("취소", color = Color.White) }
+
+                            Button(
+                                onClick = {
+                                    datePickerState.selectedDateMillis?.let {
+                                        viewModel.setSelectedDate(it)
+                                    }
+                                    showCalendar = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                            ) { Text("확인", color = Color.White) }
+                        }
+                    }
+                }
+            }
         }
     }
 }
