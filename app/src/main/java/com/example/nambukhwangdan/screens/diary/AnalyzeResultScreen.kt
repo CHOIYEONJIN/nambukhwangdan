@@ -178,27 +178,29 @@ fun AnalyzeResultScreen(
                 }
             }
 
+            // 🔹 LazyColumn (내용 시작)
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // ⭐️ 수정된 부분: 단일 item으로 오늘 일기 미리보기를 표시합니다.
-                item {
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .fillMaxWidth()
-                            .background(Surface, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+            ) { replyLetter?.let { letter ->
+                // 오늘 일기 카드
+                    items(pastLetters.size) { index ->
+                        Column(
+                         modifier = Modifier
+                               .padding(horizontal = 20.dp)
+                                .shadow(4.dp, RoundedCornerShape(10.dp))
+                               .fillMaxWidth()
+                               .background(Surface, RoundedCornerShape(10.dp))
+                               .padding(horizontal = 20.dp, vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                         //오늘 일기 text 부분
-                        Text("오늘의 일기 미리보기", fontWeight = FontWeight.Bold)
-                        Text(diary, Modifier.padding(10.dp), fontSize = 14.sp)
+                            Text("오늘의 일기 미리보기", fontWeight = FontWeight.Bold)
+                            ExpandableDiaryCard(diary)
+                        }
                     }
                 }
 

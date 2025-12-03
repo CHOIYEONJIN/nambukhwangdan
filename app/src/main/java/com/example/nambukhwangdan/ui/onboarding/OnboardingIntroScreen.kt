@@ -1,6 +1,5 @@
 package com.example.nambukhwangdan.ui.onboarding
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,18 +21,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nambukhwangdan.ui.theme.*  // Background, Primary, Surface, OnSurface, Grey
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.res.painterResource
-import com.example.nambukhwangdan.R
+
 @Composable
 fun OnboardingIntroScreen(
     onNext: () -> Unit = {},
 ) {
-    val pretendard = FontFamily.Default
-    val logoPainter = painterResource(id = R.drawable.title)
+    val pretendard = FontFamily.Default // TODO: Pretendard 폰트 리소스 추가 시 교체
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Surface),
+            .background(Background),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -44,11 +42,11 @@ fun OnboardingIntroScreen(
             Spacer(Modifier.height(150.dp))
 
             // 흰색 박스 160x80 (로고 자리)
-            Image(
-                painter = logoPainter,
-                contentDescription = "앱 로고",
+            Box(
                 modifier = Modifier
-                    .size(width = 250.dp, height = 48.dp)
+                    .size(width = 160.dp, height = 80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Surface)
             )
 
             // spacer 20
@@ -57,7 +55,7 @@ fun OnboardingIntroScreen(
             // 텍스트: '띄워보내는'만 Primary, 나머지 #000000
             val title = buildAnnotatedString {
                 withStyle(SpanStyle(color = Primary)) { append("띄워보내는") }
-                withStyle(SpanStyle(color = OnSurface)) { append("에 오신것을 환영합니다") }
+                withStyle(SpanStyle(color = OnSurface)) { append(" 에 오신것을 환영합니다") }
             }
             Text(
                 text = title,
@@ -71,7 +69,7 @@ fun OnboardingIntroScreen(
 
             // 안내 텍스트 3줄 (필요 문구로 교체)
             Text(
-                text = "어제의 나와 내일의 나와 함께 하루를 기록해요",
+                text = "내일의 나와 함께 하루를 기록해요",
                 fontFamily = pretendard,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
@@ -80,7 +78,7 @@ fun OnboardingIntroScreen(
             // spacer 20
             Spacer(Modifier.height(20.dp))
             Text(
-                text = "미래의 나를 위한 유리병 편지를 띄워 둬요",
+                text = "특정 날짜에 도착하는 느린 편지를 만들 수 있어요",
                 fontFamily = pretendard,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
@@ -89,7 +87,7 @@ fun OnboardingIntroScreen(
             // spacer 20
             Spacer(Modifier.height(20.dp))
             Text(
-                text = "익명의 친구와 유리병 편지를 주고 받아요",
+                text = "익명에게 띄우는 유리병 편지도 가능해요",
                 fontFamily = pretendard,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
