@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -107,14 +108,19 @@ class DiaryRepository @Inject constructor(
 
     fun observeRemoteDiaries(): Flow<List<Diary>> {
         val uid = auth.currentUser?.uid ?: return flowOf(emptyList())
-        if (!canSync()) return flowOf(emptyList())
-        return callbackFlow {
-            val registration = userCollection(uid)
-                .addSnapshotListener { snapshot, _ ->
-                    val diaries = snapshot?.documents?.mapNotNull { it.toDiarySafe() } ?: emptyList()
-                    trySend(diaries)
+        return networkMonitor.isOnline.flatMapLatest { online ->
+            if (!online) {
+                flowOf(emptyList())
+            } else {
+                callbackFlow {
+                    val registration = userCollection(uid)
+                        .addSnapshotListener { snapshot, _ ->
+                            val diaries = snapshot?.documents?.mapNotNull { it.toDiarySafe() } ?: emptyList()
+                            trySend(diaries)
+                        }
+                    awaitClose { registration.remove() }
                 }
-            awaitClose { registration.remove() }
+            }
         }
     }
 
