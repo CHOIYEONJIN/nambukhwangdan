@@ -27,6 +27,8 @@ class DiaryViewModel @Inject constructor(
     private val repo: DiaryRepository,
     private val firestore: FirebaseFirestore
 ) : ViewModel() {
+
+
     //구글 로그인된 유저의 userid값을 받아옴
     private val auth = FirebaseAuth.getInstance()
     private val userId: String?
@@ -165,48 +167,6 @@ class DiaryViewModel @Inject constructor(
         replyToId.value = id
     }
 
-    fun setReceiver(name: String) {
-        receiverName.value = name
-    }
-    // --- Repository를 사용하는 로직 (기존 두 번째 ViewModel의 내용) ---
-
-    private val _displayMonth = MutableStateFlow(YearMonth.now())
-    val displayMonth = _displayMonth.asStateFlow()
-
-//    val diariesForMonth = combine(allDiaries, displayMonth) { diaries, month ->
-//        diaries.filter { diary ->
-//            val diaryMonth = YearMonth.from(
-//                Instant.ofEpochMilli(diary.date)
-//                    .atZone(ZoneId.systemDefault())
-//                    .toLocalDate()
-//            )
-//            diaryMonth == month
-//        }.sortedByDescending { it.date }
-//    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    fun moveToPreviousMonth() {
-        _displayMonth.value = _displayMonth.value.minusMonths(1)
-    }
-
-    fun moveToNextMonth() {
-        _displayMonth.value = _displayMonth.value.plusMonths(1)
-    }
-
-    fun saveDiary(diary: Diary) {
-        viewModelScope.launch {
-            repo.insertDiary(diary.toEntity())
-        }
-    }
-
-    val allRegularDiaries = allDiaries
-        .map { diaries ->
-            diaries.filter { !it.sendToFuture }
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Lazily,
-            emptyList()
-        )
     //전체 일기를 받아오기
     val allDiaries = repo.getAllDiaries()
         .map { diaries -> diaries.map { it } }
@@ -230,17 +190,6 @@ class DiaryViewModel @Inject constructor(
         viewModelScope.launch { repo.syncDiaries() }
     }
 
-
-    val allSentLetters = allDiaries
-        .map { diaries ->
-            diaries.filter { it.sendToFuture }
-
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Lazily,
-            emptyList()
-        )
 
     //일기 수정 시 업데이트 하는 함수
     // 수정 기능을 넣을거면 사용하고 아니라면 삭제 가능

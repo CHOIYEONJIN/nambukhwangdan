@@ -1,6 +1,5 @@
 package com.example.nambukhwangdan.ui.home
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,12 +18,12 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,51 +32,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.example.nambukhwangdan.R // R.drawable.my_letter_icon을 위해 필요
 import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.navigation.Routes
-import com.example.nambukhwangdan.screens.diary.formatDate // formatDate 함수가 해당 패키지에 있다고 가정
+import com.example.nambukhwangdan.screens.diary.formatDate
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import kotlin.random.Random
 
-// ⭐️ 편지의 크기와 랜덤 범위 정의
-private val NOTE_WIDTH = 100.dp
-private val NOTE_HEIGHT = 70.dp
-private const val MAX_X = 280
-private const val MIN_X = 20
-private const val MAX_Y = 380
-private const val MIN_Y = 60
-private const val BOUNDARY_HEIGHT = 500 // 편지들이 생성될 영역의 최대 높이
-
 @Composable
 fun HomeScreen( viewModel: DiaryViewModel,
                 bottomNavController: NavController) {
     val pretendard = FontFamily.Default
-
-    // ⭐️ sendToFuture=true 인 편지 목록을 사용합니다.
-    val lettersToReply by viewModel.allSentLetters.collectAsState(initial = emptyList())
-    val unrepliedCount = lettersToReply.size
+    val note1X = Random.nextInt(20, 150).dp
+    val note1Y = Random.nextInt(60, 200).dp
+    val note2X = Random.nextInt(180, 280).dp
+    val note2Y = Random.nextInt(220, 380).dp
 
     // 팝업 표시 상태 변수 유지
     var showPopup by remember { mutableStateOf(false) }
-    var selectedLetter by remember { mutableStateOf<Diary?>(null) }
-
-    // ⭐️ 각 편지의 랜덤 위치를 저장하는 맵
-    val randomPositions = remember(lettersToReply) {
-        lettersToReply.associate { letter ->
-            val x = Random.nextInt(MIN_X, MAX_X).dp
-            val y = Random.nextInt(MIN_Y, MAX_Y).dp
-            letter.id to Pair(x, y)
-        }
-    }
+    var selectedDiary by remember { mutableStateOf<Diary?>(null) }
 
     Column(
         modifier = Modifier
@@ -85,83 +64,102 @@ fun HomeScreen( viewModel: DiaryViewModel,
             .background(Background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // ⭐️ 알림 바: 편지 수에 따라 표시
-        if (unrepliedCount > 0) {
-            Box(
-                modifier = Modifier
-                    .width(200.dp)
-                    .height(25.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Primary),
-                contentAlignment = Alignment.Center
+        // 200*25 primary color 긴 pill 안에 row
+        Box(
+            modifier = Modifier
+                .width(200.dp)
+                .height(25.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Text(
+                    text = "새로운 편지가 도착했어요",
+                    fontFamily = pretendard,
+                    fontSize = 14.sp,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                // 빨간 원형 안의 숫자
+                Box(
+                    modifier = Modifier
+                        .size(15.dp)
+                        .clip(CircleShape)
+                        .background(Color.Red),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "새로운 편지가 도착했어요",
+                        text = "2", // 예시 알림 수
                         fontFamily = pretendard,
-                        fontSize = 14.sp,
+                        fontSize = 10.sp,
                         color = Color.White
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(15.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = unrepliedCount.toString(), // ⭐️ 실제 편지 수
-                            fontFamily = pretendard,
-                            fontSize = 10.sp,
-                            color = Color.White
-                        )
-                    }
                 }
             }
-        } else {
-            // 편지가 없을 때 공백
-            Spacer(modifier = Modifier.height(25.dp))
         }
 
         // Spacer 25
         Spacer(modifier = Modifier.height(25.dp))
 
+        // 쪽지 팝업 2개 (랜덤 위치 예시)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(BOUNDARY_HEIGHT.dp)
+                .height(500.dp)
         ) {
-            // ⭐️ lettersToReply 목록을 순회하며 편지 아이콘을 생성
-            lettersToReply.forEach { letter ->
-                val (x, y) = randomPositions[letter.id] ?: (0.dp to 0.dp) // 랜덤 위치 사용
-
+            // 쪽지 영역
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+            ) {
+                // 쪽지 1
                 Box(
                     modifier = Modifier
-                        .size(width = NOTE_WIDTH, height = NOTE_HEIGHT)
-                        .offset(x = x, y = y)
+                        .size(width = 120.dp, height = 80.dp)
+                        .offset(x = note1X, y = note1Y)
                         .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "💌 편지 A",
+                        fontFamily = pretendard,
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                }
+
+                // 쪽지 2 (클릭 가능하도록 수정)
+                Box(
+                    modifier = Modifier
+                        .size(width = 100.dp, height = 70.dp)
+                        .offset(x = note2X, y = note2Y)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White)
                         .clickable {
-                            selectedLetter = letter
+                            // 예: pastLetters 중 원하는 편지를 선택 (지금은 index 0 예시)
+                            selectedDiary = viewModel.pastDiaries.value[0]
                             showPopup = true
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.paper3), // ⭐️ 이미지 리소스 사용
-                        contentDescription = "답장할 편지",
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    Text("💬 편지 B",
+                        fontFamily = pretendard,
+                        fontSize = 14.sp,
+                        color = Color.Black)
                 }
             }
         }
 
+        // Spacer 20
         Spacer(Modifier.weight(1f))
 
+        // 300*50 primary color 긴 pill 버튼
         Box(
             modifier = Modifier
                 .width(300.dp)
@@ -170,23 +168,27 @@ fun HomeScreen( viewModel: DiaryViewModel,
                 .background(Primary),
             contentAlignment = Alignment.Center
         ) {
-            Button(onClick = {bottomNavController.navigate(Routes.NewLetter)},
-                colors= ButtonDefaults.buttonColors(containerColor = Primary, contentColor = Color.White)){
-                Text(
-                    text = "편지 쓰러가기",
-                    fontFamily = pretendard,
-                    fontSize = 16.sp,
-                    color = Color.White
-                )
-            }
+            Button(onClick = {bottomNavController.navigate(Routes.NewLetter)}, colors= ButtonColors(Primary,Color.White,
+                Background,Color.White)){
+            Text(
+                text = "편지 쓰러가기",
+                fontFamily = pretendard,
+                fontSize = 16.sp,
+                color = Color.White
+            )}
         }
         Spacer(modifier = Modifier.height(56.dp))
+
+
+        // ❌ Spacer 56 제거 (하단 여백은 MainScreenHost의 innerPadding으로 처리됨)
+        // ❌ HomeBottomNavigation 호출 제거 (MainScreenHost에서 처리됨)
     }
 
-    if (showPopup && selectedLetter != null) {
+    // 팝업 로직 추가: showPopup이 true일 때만 Dialog 표시
+    if (showPopup && selectedDiary != null) {
         Dialog(onDismissRequest = { showPopup = false }) {
             CustomNotePopup(
-                diary = selectedLetter!!,
+                diary = selectedDiary!!,
                 onClose = { showPopup = false },
                 bottomNavController = bottomNavController,
                 viewModel = viewModel
@@ -216,45 +218,47 @@ fun CustomNotePopup(
     { Column(
         modifier = Modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally){
-        Text(
-            text = "💌 ${formatDate(diary.createdAt)}의 ${diary.nickname}에게서 온 편지",
+            Text(
+            text = "💌 ${formatDate(diary.createdAt)}의 나에게서 온 편지",
             fontFamily = pretendard, fontSize = 20.sp, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp))
 
-        Text(
-            text = diary.content,
-            fontFamily = pretendard,
-            fontSize = 16.sp, color = Color.Gray,
-            modifier = Modifier.padding(bottom = 32.dp))
-        Button(
-            onClick = {
-                viewModel.setReplyToId(diary.id)
-                bottomNavController.navigate(Routes.DiaryWrite)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.
-            buttonColors(containerColor = Primary)
-        ) {
-            Text("답장하기",
+            Text(
+                text = diary.content,  // ← 실제 내용 출력됨!
                 fontFamily = pretendard,
-                fontSize = 18.sp,
-                color = Color.White)
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Button( onClick = onClose,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.
+                fontSize = 16.sp, color = Color.Gray,
+                modifier = Modifier.padding(bottom = 32.dp))
+            Button(
+                onClick = {
+                    viewModel.setReplyToId(diary.id)
+                    bottomNavController.navigate(Routes.DiaryWrite)
+                          },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.
+                buttonColors(containerColor = Primary)
+            ) {
+                Text("답장하기",
+                    fontFamily = pretendard,
+                    fontSize = 18.sp,
+                    color = Color.White)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Button( onClick = onClose,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.
             buttonColors(containerColor = Primary) ) {
             Text( text = "닫기",
                 fontFamily = pretendard,
                 fontSize = 18.sp,
                 color = Color.White )
+            }
         }
     }
-    }
 }
+
+

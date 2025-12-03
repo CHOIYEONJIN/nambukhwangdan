@@ -86,8 +86,7 @@ fun MainScreenHost(
             // 일기 탭
             composable(Routes.Journal) {
                 JournalScreen(
-                    viewModel = diaryViewModel,
-                    navController = bottomNavController
+                    viewModel = diaryViewModel
                 )
             }
 
@@ -120,9 +119,7 @@ fun MainScreenHost(
             }
 
             // 더미 화면
-            composable(Routes.Inbox) { InboxScreen(
-                viewModel = diaryViewModel,
-                navController = bottomNavController) }
+            composable(Routes.Inbox) { InboxScreen() }
             composable(Routes.Settings) {
                 SettingsScreen(
                     authViewModel = authViewModel, // AuthViewModel 전달
