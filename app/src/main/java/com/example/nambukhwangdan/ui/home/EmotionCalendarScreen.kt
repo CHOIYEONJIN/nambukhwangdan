@@ -303,7 +303,7 @@ fun LetterItem(
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
         Text(
-            text = "${formatDate(letter.createdAt)} • ${letter.nickname}",
+            text = "${formatDate(letter.createdAt)} • ${letter.senderName.ifEmpty { "익명" }}",
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp
         )

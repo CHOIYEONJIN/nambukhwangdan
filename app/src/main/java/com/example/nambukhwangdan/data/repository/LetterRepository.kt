@@ -10,8 +10,6 @@ import com.example.nambukhwangdan.model.Letter.toFirestoreMap
 import com.example.nambukhwangdan.model.Letter.toLetter
 import com.example.nambukhwangdan.model.Letter.toLetterSafe
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.AggregateSource
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +27,6 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.random.Random
 
 @Singleton
 class LetterRepository @Inject constructor(
@@ -207,20 +204,12 @@ class LetterRepository @Inject constructor(
 
     private suspend fun getRandomUserIdExcluding(currentUserId: String): String? {
         val users = firestore.collection("users")
-        val total = users.count().get(AggregateSource.SERVER).await().count
-        if (total <= 1) return null
-
-        val randomIndex = Random.nextLong(total)
-        val query = users.orderBy(FieldPath.documentId())
-            .offset(randomIndex.toInt())
-            .limit(1)
-            .get()
-            .await()
-        val candidate = query.documents.firstOrNull { it.id != currentUserId }
-        if (candidate != null) return candidate.id
-
-        val fallback = users.whereNotEqualTo(FieldPath.documentId(), currentUserId).limit(1).get().await()
-        return fallback.documents.firstOrNull()?.id
+        val snapshot = users.get().await()
+        val candidates = snapshot.documents.mapNotNull { doc ->
+            doc.id.takeIf { it != currentUserId }
+        }
+        if (candidates.isEmpty()) return null
+        return candidates.random()
     }
 
     private fun userLetters(userId: String) =
