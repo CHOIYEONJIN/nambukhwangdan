@@ -79,7 +79,7 @@ fun AnalyzeResultScreen(
     )
 // Firestore에서 감정 결과 수신
     val detectedSentiment by viewModel.detectedSentiment.collectAsState()
-    val pastLetters by viewModel.pastLetters.collectAsState()
+    val pastLetters by viewModel.pastDiaries.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
@@ -102,7 +102,7 @@ fun AnalyzeResultScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
-    val detected by viewModel.detectedEmotion.collectAsState()
+    val detected by viewModel.detectedSentiment.collectAsState()
     val selectedEmotion by viewModel.selectedEmotion.collectAsState()
     val selectedSticker by viewModel.selectedSticker.collectAsState()
     val emotionCats = listOf("긍정", "중립", "부정")

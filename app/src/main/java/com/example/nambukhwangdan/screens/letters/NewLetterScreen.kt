@@ -50,11 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
+import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -69,9 +71,13 @@ fun NewLetterScreen(
     viewModel: LetterViewModel= hiltViewModel(),
     bottomNavController: NavController
 ) {
-
+    val authViewModel: AuthViewModel = viewModel()
+    val nickname = authViewModel.authState.collectAsState().value.currentNickname
     LaunchedEffect(Unit) {
         viewModel.updateContent("")   // 항상 입력 칸을 빈칸
+    }
+    LaunchedEffect(nickname) {
+        nickname?.let { viewModel.setUserNickname(it) }
     }
     var showReceiverDialog by remember { mutableStateOf(false) }
     val letterText by viewModel.letterContent.collectAsState()
@@ -284,7 +290,11 @@ fun NewLetterScreen(
         // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistLetter()
+                if (receiverName == "익명의 누군가") {
+                    viewModel.sendRandomLetter(letterText)
+                } else {
+                    viewModel.persistLetter()
+                }
                 bottomNavController.navigate(Routes.Home) {
                     popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
                     launchSingleTop = true                          // ← 중복 생성 방지

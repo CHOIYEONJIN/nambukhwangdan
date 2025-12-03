@@ -148,3 +148,36 @@ export const analyzeSentimentV2 = onDocumentCreated(
     }
   }
 );
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+
+admin.initializeApp(); // 최상단에 최소 1번만 있어야 함
+
+export const pickRandomUser = onCall(
+{
+region: "asia-northeast3",
+},
+async (request) => {
+  const senderId = request.auth?.uid;
+
+  if (!senderId) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+
+  // Firestore users 목록 불러오기
+  const snapshot = await admin.firestore().collection("users").get();
+  const users = snapshot.docs.map((doc) => doc.id);
+
+  // 자기 자신 제외
+  const candidates = users.filter((id) => id !== senderId);
+
+  if (candidates.length === 0) {
+    throw new HttpsError("failed-precondition", "랜덤 선택 대상이 없습니다.");
+  }
+
+  // 랜덤 선택
+  const randomId =
+    candidates[Math.floor(Math.random() * candidates.length)];
+
+  return { receiverId: randomId };
+});

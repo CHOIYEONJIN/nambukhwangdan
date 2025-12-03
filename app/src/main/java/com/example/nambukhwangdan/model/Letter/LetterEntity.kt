@@ -12,6 +12,5 @@ data class LetterEntity(
     val replyToId: String?,
     val liked: Boolean = false,
     val date: Long,
-    val receiverName: String,         // 미래의 나 or 랜덤 인물
     val userId:String
     )

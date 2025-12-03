@@ -40,7 +40,7 @@ fun ReplyScreen(
     // 🔹 pastLetters → allLetters로 변경
     val pastLetters = viewModel.allLetters.collectAsState().value
     val content by viewModel.letterContent.collectAsState()
-    val replyToId by viewModel.replyToDiaryId.collectAsState()
+    val replyToId by viewModel.replyToId.collectAsState()
 
     Box(
         modifier = Modifier
@@ -58,7 +58,7 @@ fun ReplyScreen(
                 val targetLetter = pastLetters.find { it.id == targetId }
 
                 targetLetter?.let { letter ->
-                    Text("${formatDate(letter.createdAt)}의 ${letter.receiverName}에게서 온 편지")
+                    Text("${formatDate(letter.createdAt)}의 ${letter.nickname}에게서 온 편지")
 
                     ExpandableDiaryCard(letter.content)   // UI 유지 🍀
                 }

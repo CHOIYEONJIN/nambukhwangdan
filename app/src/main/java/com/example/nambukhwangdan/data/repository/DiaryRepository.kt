@@ -45,9 +45,6 @@ class DiaryRepository @Inject constructor(
 
     suspend fun getDiaryById(id: String): Diary? = diaryDao.getDiaryById(id)?.toDiary()
 
-    suspend fun deleteDiaryById(id: String) {
-        diaryDao.deleteDiaryById(id)
-    }
 
     suspend fun toggleLike(id: String) {
         val target = diaryDao.getDiaryById(id)?.toDiary() ?: return
@@ -171,7 +168,6 @@ class DiaryRepository @Inject constructor(
         "date" to date,
         "createdAt" to createdAt,
         "liked" to liked,
-        "nickname" to nickname,
         "userId" to userId,
         "updatedAt" to updatedAt,
         "sentiment" to sentimentLabel,
@@ -189,7 +185,6 @@ class DiaryRepository @Inject constructor(
             replyToId = getString("replyToId"),
             createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
             liked = getBoolean("liked") ?: false,
-            nickname = getString("nickname") ?: "나",
             userId = getString("userId") ?: "",
             updatedAt = getLong("updatedAt") ?: (getLong("createdAt") ?: System.currentTimeMillis()),
             sentimentLabel = getString("sentiment") ?: getString("sentimentLabel"),

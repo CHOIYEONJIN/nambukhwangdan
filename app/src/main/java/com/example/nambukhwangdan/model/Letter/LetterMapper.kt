@@ -6,7 +6,6 @@ fun Letter.toEntity(): LetterEntity {
     return LetterEntity(
         id = this.id,
         content = this.content,
-        receiverName=this.receiverName,
         createdAt = this.createdAt,
         nickname = this.nickname,
         replyToId = this.replyToId,
@@ -20,7 +19,6 @@ fun LetterEntity.toLetter(): Letter {
     return Letter(
         id = this.id,
         content = this.content,
-        receiverName=this.receiverName,
         createdAt = this.createdAt,
         nickname = this.nickname,
         replyToId = this.replyToId,

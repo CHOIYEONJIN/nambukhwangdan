@@ -143,7 +143,7 @@ fun HomeScreen( viewModel: DiaryViewModel,
                         .background(Color.White)
                         .clickable {
                             // 예: pastLetters 중 원하는 편지를 선택 (지금은 index 0 예시)
-                            selectedDiary = viewModel.pastLetters.value[0]
+                            selectedDiary = viewModel.pastDiaries.value[0]
                             showPopup = true
                         },
                     contentAlignment = Alignment.Center
@@ -219,7 +219,7 @@ fun CustomNotePopup(
         modifier = Modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally){
             Text(
-            text = "💌 ${formatDate(diary.createdAt)}의 ${diary.nickname}에게서 온 편지",
+            text = "💌 ${formatDate(diary.createdAt)}의 나에게서 온 편지",
             fontFamily = pretendard, fontSize = 20.sp, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp))
 
             Text(

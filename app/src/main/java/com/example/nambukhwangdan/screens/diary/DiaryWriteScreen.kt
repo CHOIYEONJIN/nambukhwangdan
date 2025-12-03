@@ -85,7 +85,7 @@ fun DiaryWriteScreen(
     bottomNavController: NavController
 ) {
     val selectedUris by viewModel.selectedUris.collectAsState()
-    val pastLetters by viewModel.pastLetters.collectAsState()
+    val pastLetters by viewModel.pastDiaries.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
