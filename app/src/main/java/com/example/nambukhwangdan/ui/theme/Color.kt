@@ -17,5 +17,4 @@ val Grey       = Color(0xFFD9D9D9) // 인디케이터 점
 object Variables {
 
     val Color4: Color = Color(0xFFDBE4ED)
-    val Color5: Color = Color(0xFF6194D7)
 }

@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,10 +22,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,6 +64,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.screens.letters.ExpandableDiaryCard
 import com.example.nambukhwangdan.screens.letters.formatDate
 import com.example.nambukhwangdan.ui.theme.Background
@@ -78,12 +84,12 @@ fun DiaryWriteScreen(
     viewModel: DiaryViewModel,
     bottomNavController: NavController
 ) {
-
-    val pastLetters by viewModel.pastLetters.collectAsState()
+    val selectedUris by viewModel.selectedUris.collectAsState()
+    val pastLetters by viewModel.pastDiaries.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
-
+    val isAnalyzing by viewModel.isAnalyzing.collectAsState()
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = todayMillis
@@ -93,18 +99,24 @@ fun DiaryWriteScreen(
         SimpleDateFormat("yyyy년 M월 d일", Locale.KOREA)
             .format(Date(pickedMillis))
     }
-
+    LaunchedEffect(viewModel.detectedSentiment.collectAsState().value) {
+        if (viewModel.detectedSentiment.value != null) {
+            bottomNavController.navigate(Routes.AnalyzeResult)
+        }
+    }
     // ✅ 달력 팝업 표시 여부
     var showCalendar by remember { mutableStateOf(false) }
 
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
+
+    //사진 선택을 위한 launcher
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 3),
         onResult = { uris ->
-            // 선택된 URI 리스트를 ViewModel에 전달
-            viewModel.setSelectedUris(uris)
+            val merged = (selectedUris + uris).distinct().take(3)  // 기존 + 신규 + 중복 제거
+            viewModel.setSelectedUris(merged)
         }
     )
     LaunchedEffect(Unit) {
@@ -154,7 +166,7 @@ fun DiaryWriteScreen(
                             .width(24.dp)
                             .height(10.dp)
                             .background(
-                                color = Variables.Color5,
+                                color = Primary,
                                 shape = RoundedCornerShape(999.dp)
                             )
                     )
@@ -214,32 +226,124 @@ fun DiaryWriteScreen(
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        //사진 추가 아이콘 박스
+
+                        // 📌 1) 사진 / 아이콘을 담는 영역 (clickable 제거)
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(Surface)
-                                .border(1.dp, Variables.Color5, CircleShape)
-                                .clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .align(Alignment.CenterHorizontally)
+                                .height(60.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Surface),
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "사진 추가",
-                                tint = Variables.Color5,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
 
+                            if (selectedUris.isEmpty()) {
+                                // 📌 2) 사진 없으면 아이콘만 → 이 영역이 클릭 가능
+                                Box(
+                                    modifier = Modifier
+                                        .size(35.dp)
+                                        .align(Alignment.Center)
+                                        .clip(CircleShape)
+                                        .background(Surface)
+                                        .border(1.dp, Primary, CircleShape)
+                                        .clickable {
+                                            launcher.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "사진 추가",
+                                        tint = Primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                            } else {
+                                // 📌 3) 사진 있을 때 → LazyRow (clickable ❌)
+                                // 📌 LazyRow 안에 사진 + (+) 버튼 같이 넣기
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center                                  ) {
+                                    // 1) 선택된 사진들 먼저 보여주기
+                                    items(selectedUris.take(3)) { uri ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(50.dp)
+                                                .padding(6.dp)
+                                        ) {
+                                            Image(
+                                                painter = rememberAsyncImagePainter(uri),
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(10.dp))
+                                            )
+
+                                            // 삭제 버튼
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "삭제",
+                                                tint = Color.White,
+                                                modifier = Modifier
+                                                    .size(20.dp)
+                                                    .align(Alignment.TopEnd)
+                                                    .background(
+                                                        Color.Black.copy(alpha = 0.4f),
+                                                        CircleShape
+                                                    )
+                                                    .clip(CircleShape)
+                                                    .clickable { viewModel.removeUri(uri) }
+                                            )
+                                        }
+                                    }
+
+                                    // 📌 2) 사진이 3장 미만일 때 → + 버튼을 LazyRow에 item으로 추가!
+                                    if (selectedUris.size < 3) {
+                                        item {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(50.dp) // 사진 크기랑 동일하게 맞춤
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(Surface)
+                                                    .border(
+                                                        1.dp,
+                                                        Primary,
+                                                        RoundedCornerShape(10.dp)
+                                                    )
+                                                    .clickable {
+                                                        launcher.launch(
+                                                            PickVisualMediaRequest(
+                                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                            )
+                                                        )
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = "사진 추가",
+                                                    tint = Primary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // 📌 4) 사진 영역 밑에 Divider
                         HorizontalDivider(
                             modifier = Modifier
-                                .padding(vertical = 8.dp)
+                                .padding(top = 8.dp, bottom = 8.dp)
                                 .fillMaxWidth(0.8f),
                             thickness = 1.dp,
                             color = Variables.Color4
                         )
 
+                        // 📌 5) 이제 TextField 등장
                         TextField(
                             value = diary,
                             onValueChange = { viewModel.updateDiary(it) },
@@ -275,24 +379,36 @@ fun DiaryWriteScreen(
                         )
                     }
                 }
+
             }
         }
 
         // 하단 버튼
         Button(
-            onClick = { viewModel.startAnalyze(bottomNavController) },
+            onClick = {
+                viewModel.resetDetectedSentiment()
+                viewModel.persistDiaryAndAnalyze(bottomNavController)
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
             Text("다음으로", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         }
-        if (viewModel.isAnalyzing) {
-            AnalyzeLoadingOverlay(viewModel, bottomNavController)   // ← Overlay 컴포저블 호출
+        // 분석 결과 도착 시 화면 이동
+        LaunchedEffect(viewModel.detectedSentiment.collectAsState().value) {
+            if (viewModel.detectedSentiment.value != null) {
+                bottomNavController.navigate(Routes.AnalyzeResult)
+            }
+        }
+
+// 🔥 로딩 오버레이는 isAnalyzing으로만 제어
+        if (isAnalyzing) {
+            AnalyzeLoadingOverlay()
         }
 
         // 달력 팝업 구현 부분
@@ -341,9 +457,9 @@ fun DiaryWriteScreen(
                                 containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black ,
-                                selectedDayContainerColor = Variables.Color5,
+                                selectedDayContainerColor = Primary,
                                 selectedDayContentColor = Color.White,
-                                todayContentColor = Variables.Color5
+                                todayContentColor = Primary
                             )
                         )
 
@@ -356,7 +472,7 @@ fun DiaryWriteScreen(
                             Button(
                                 onClick = { showCalendar = false },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("취소", color = Color.White) }
 
                             Button(
@@ -367,7 +483,7 @@ fun DiaryWriteScreen(
                                     showCalendar = false
                                 },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("확인", color = Color.White) }
                         }
                     }

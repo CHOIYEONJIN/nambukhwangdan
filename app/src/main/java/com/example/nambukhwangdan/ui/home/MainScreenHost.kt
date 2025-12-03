@@ -31,6 +31,7 @@ import com.example.nambukhwangdan.ui.settings.SettingsScreen
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel
 
 // TODO: 나머지 탭 화면 (Journal, Inbox, Settings)은 더미 파일 사용
 
@@ -39,6 +40,7 @@ import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 fun MainScreenHost(
     appNavController: NavController,
     diaryViewModel: DiaryViewModel,
+    letterViewModel: LetterViewModel,
     authViewModel: AuthViewModel
 ) {
     val bottomNavController = rememberNavController()
@@ -76,7 +78,10 @@ fun MainScreenHost(
             }
 
             // 감정 캘린더
-            composable(Routes.Calendar) { EmotionCalendarScreen(viewModel = diaryViewModel) }
+            composable(Routes.Calendar) { EmotionCalendarScreen(
+                diaryViewModel = diaryViewModel,
+                letterViewModel=letterViewModel
+            ) }
 
             // 일기 탭
             composable(Routes.Journal) {
@@ -103,13 +108,13 @@ fun MainScreenHost(
 
             composable(Routes.LetterToTomorrow) {
                 LetterToTomorrowScreen(
-                    viewModel = diaryViewModel,
+                    viewModel = letterViewModel,
                     navController = bottomNavController
                 )
             }
             composable(Routes.NewLetter){
                 NewLetterScreen(
-                    viewModel=diaryViewModel,
+                    viewModel=letterViewModel,
                     bottomNavController=bottomNavController
                 )
             }

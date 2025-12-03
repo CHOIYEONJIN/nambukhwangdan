@@ -1,12 +1,9 @@
 package com.example.nambukhwangdan.screens.letters
 
 import android.annotation.SuppressLint
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
+import android.util.Log
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,13 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,8 +25,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -49,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -59,11 +49,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
+import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
-import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import com.example.nambukhwangdan.viewmodel.AuthViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -74,17 +68,20 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewLetterScreen(
-    viewModel: DiaryViewModel,
+    viewModel: LetterViewModel= hiltViewModel(),
     bottomNavController: NavController
 ) {
+    val authViewModel: AuthViewModel = viewModel()
+    val nickname = authViewModel.authState.collectAsState().value.currentNickname
     LaunchedEffect(Unit) {
-        viewModel.updateDiary("")   // 항상 입력 칸을 빈칸
+        viewModel.updateContent("")   // 항상 입력 칸을 빈칸
+    }
+    LaunchedEffect(nickname) {
+        nickname?.let { viewModel.setUserNickname(it) }
     }
     var showReceiverDialog by remember { mutableStateOf(false) }
-    val diary by viewModel.todayDiary.collectAsState()
+    val letterText by viewModel.letterContent.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
-    val selectedEmotion by viewModel.selectedEmotion.collectAsState()
-    val selectedSticker by viewModel.selectedSticker.collectAsState()
     val todayMillis = System.currentTimeMillis()
     val receiverName by viewModel.receiverName.collectAsState()
 
@@ -104,13 +101,6 @@ fun NewLetterScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
-        onResult = { uris ->
-            // 선택된 URI 리스트를 ViewModel에 전달
-            viewModel.setSelectedUris(uris)
-        }
-    )
     LaunchedEffect(Unit) {
         val calendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 1)
@@ -172,7 +162,7 @@ fun NewLetterScreen(
                             Text(
                                 text = "${formatDate(dateMillis)} 23:00 의 ",
                                 fontSize = 13.sp,
-                                color = Variables.Color5,                 // 강조 색
+                                color = Primary,                 // 강조 색
                                 fontWeight = FontWeight.SemiBold,         // 글자 강조
                                 modifier = Modifier
                                     .clickable { showCalendar = true }
@@ -180,7 +170,7 @@ fun NewLetterScreen(
                             )
                             Text(
                                 text = receiverName,
-                                color = Variables.Color5,
+                                color = Primary,
                                 fontSize = 13.sp,
                                 modifier = Modifier.clickable { showReceiverDialog = true }
                             )
@@ -244,38 +234,12 @@ fun NewLetterScreen(
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        //사진 추가 아이콘 박스
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(Surface)
-                                .border(1.dp, Variables.Color5, CircleShape)
-                                .clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // 아직 사진 추가 페이지는 구현이 안돼서 누르면 앱 꺼져요
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "사진 추가",
-                                tint = Variables.Color5,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        HorizontalDivider(
-                            modifier = Modifier
-                                .padding(vertical = 8.dp)
-                                .fillMaxWidth(0.8f),
-                            thickness = 1.dp,
-                            color = Variables.Color4
-                        )
-
                         TextField(
-                            value = diary,
-                            onValueChange = { viewModel.updateDiary(it) },
+                            value = letterText,
+                            onValueChange = { viewModel.updateContent(it) },
                             placeholder = {
                                 Text(
-                                    text = "오늘의 일기를 작성해주세요",
+                                    text = "편지의 내용을 입력해주세요",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
                                     fontFamily = FontFamily.SansSerif
@@ -326,11 +290,11 @@ fun NewLetterScreen(
         // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistDiary(
-                    content = diary,
-                    sendToFuture = receiverName == "미래의 나",
-                    dateMillis = dateMillis
-                )
+                if (receiverName == "익명의 누군가") {
+                    viewModel.sendRandomLetter(letterText)
+                } else {
+                    viewModel.persistLetter()
+                }
                 bottomNavController.navigate(Routes.Home) {
                     popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거
                     launchSingleTop = true                          // ← 중복 생성 방지
@@ -342,10 +306,12 @@ fun NewLetterScreen(
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
             Text("저장하기", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         }
+        Log.d("LetterSaved", "saved letter = $letterText")
+
 
         // 달력 팝업 구현 부분
         //TODO: Timepicker 구현해야함
@@ -394,9 +360,9 @@ fun NewLetterScreen(
                                 containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black ,
-                                selectedDayContainerColor = Variables.Color5,
+                                selectedDayContainerColor = Primary,
                                 selectedDayContentColor = Color.White,
-                                todayContentColor = Variables.Color5
+                                todayContentColor = Primary
                             )
                         )
 
@@ -409,7 +375,7 @@ fun NewLetterScreen(
                             Button(
                                 onClick = { showCalendar = false },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor =Primary)
                             ) { Text("취소", color = Color.White) }
 
                             Button(
@@ -420,7 +386,7 @@ fun NewLetterScreen(
                                     showCalendar = false
                                 },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("확인", color = Color.White) }
                         }
                     }

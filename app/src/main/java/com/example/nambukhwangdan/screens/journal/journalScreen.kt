@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
 import com.example.nambukhwangdan.ui.theme.Primary
@@ -559,6 +559,24 @@ fun DiaryItem(
     }
 }
 
+
+
+@Composable
+private fun SentimentBadge(label: String) {
+    val color = when (label.lowercase()) {
+        "positive", "긍정" -> Primary
+        "negative", "부정" -> Color(0xFFF44336)
+        else -> Color(0xFFFFC107)
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.15f))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(text = label, color = color, fontSize = 10.sp)
+    }
+}
 // --- 유틸리티 함수 (날짜 포매팅) ---
 @RequiresApi(Build.VERSION_CODES.O)
 private fun Long.dayLabelForInbox(): String {

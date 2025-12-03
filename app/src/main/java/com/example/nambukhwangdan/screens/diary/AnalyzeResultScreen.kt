@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.navigation.Routes
+import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
@@ -76,7 +77,9 @@ fun AnalyzeResultScreen(
         "중립" to Color(0xFFFFC107),   // 노랑 (중립)
         "부정" to Color(0xFFF44336)    // 빨강 (부정)
     )
-    val pastLetters by viewModel.pastLetters.collectAsState()
+// Firestore에서 감정 결과 수신
+    val detectedSentiment by viewModel.detectedSentiment.collectAsState()
+    val pastLetters by viewModel.pastDiaries.collectAsState()
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
@@ -99,11 +102,13 @@ fun AnalyzeResultScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
-    val detected by viewModel.detectedEmotion.collectAsState()
+    val detected by viewModel.detectedSentiment.collectAsState()
     val selectedEmotion by viewModel.selectedEmotion.collectAsState()
     val selectedSticker by viewModel.selectedSticker.collectAsState()
     val emotionCats = listOf("긍정", "중립", "부정")
-    val safeEmotion = selectedEmotion ?: detected ?: "기쁨"  //기본값
+
+
+    val safeEmotion = selectedEmotion ?: detectedSentiment ?: "기쁨"
 
     val detailStickers = remember(safeEmotion) {
         when (safeEmotion) {
@@ -160,7 +165,7 @@ fun AnalyzeResultScreen(
                             .width(24.dp)
                             .height(10.dp)
                             .background(
-                                color = Variables.Color5,
+                                color = Primary,
                                 shape = RoundedCornerShape(999.dp)
                             )
                     )
@@ -209,12 +214,15 @@ fun AnalyzeResultScreen(
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                        LaunchedEffect(Unit) {
-                            if (selectedEmotion == null) {   // 이미 선택되어 있으면 덮어쓰지 않음
-                                viewModel.chooseEmotion(detected ?: "분석중")
+                        LaunchedEffect(detectedSentiment) {
+                            if (detectedSentiment != null && selectedEmotion == null) {
+                                viewModel.chooseEmotion(detectedSentiment!!)
                             }
                         }
-                        Text("오늘의 감정은?  ${selectedEmotion ?: detected}", fontWeight = FontWeight.Medium)
+                        Text(
+                                text = "오늘의 감정은: ${selectedEmotion ?: detectedSentiment ?: "분석 중..."}",
+                        fontWeight = FontWeight.Medium
+                        )
 
                         Text("감정 분류 선택", fontWeight = FontWeight.Bold)
                         LazyRow(
@@ -269,10 +277,6 @@ fun AnalyzeResultScreen(
         // 하단 버튼
         Button(
             onClick = {
-                viewModel.persistDiary(
-                    content = diary,
-                    dateMillis = dateMillis
-                )
                 bottomNavController.navigate(Routes.LetterToTomorrow)
             },
             modifier = Modifier
@@ -281,7 +285,7 @@ fun AnalyzeResultScreen(
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
             Text(
                 "다음으로",
@@ -335,9 +339,9 @@ fun AnalyzeResultScreen(
                                 containerColor = Surface,
                                 titleContentColor = Variables.Color4,
                                 weekdayContentColor = Color.Black,
-                                selectedDayContainerColor = Variables.Color5,
+                                selectedDayContainerColor = Primary,
                                 selectedDayContentColor = Color.White,
-                                todayContentColor = Variables.Color5
+                                todayContentColor = Primary
                             )
                         )
 
@@ -350,7 +354,7 @@ fun AnalyzeResultScreen(
                             Button(
                                 onClick = { showCalendar = false },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("취소", color = Color.White) }
 
                             Button(
@@ -361,7 +365,7 @@ fun AnalyzeResultScreen(
                                     showCalendar = false
                                 },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Variables.Color5)
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) { Text("확인", color = Color.White) }
                         }
                     }

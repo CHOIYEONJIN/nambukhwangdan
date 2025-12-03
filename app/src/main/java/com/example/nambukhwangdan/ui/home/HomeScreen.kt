@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.nambukhwangdan.R // R.drawable.my_letter_icon을 위해 필요
-import com.example.nambukhwangdan.model.Diary
+import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.screens.diary.formatDate // formatDate 함수가 해당 패키지에 있다고 가정
 import com.example.nambukhwangdan.ui.theme.Background

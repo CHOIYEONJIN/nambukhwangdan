@@ -103,6 +103,11 @@ fun LoginScreen(
                 val googleIdTokenCred = GoogleIdTokenCredential.createFrom(cred.data)
                 val idToken = googleIdTokenCred.idToken
 
+                if (idToken == null) {
+                    errorMessage = "Google 로그인이 취소되었거나 토큰을 받지 못했습니다."
+                    return@launch        // ❗ Firebase로 넘기지 말고 종료
+                }
+
                 // Firebase Auth로 교환
                 val firebaseCred = GoogleAuthProvider.getCredential(idToken, null)
                 auth.signInWithCredential(firebaseCred)
@@ -238,11 +243,12 @@ fun LoginScreen(
                     )
                 )
                 .background(buttonColor)
-                .clickable() {
+                .clickable(enabled = isLoggedIn) {
+                    if(buttonClickable){
                     // 로그인 성공 시에만 MainHost로 이동하는 onLoginSuccess 콜백 실행
 
                         onLoginSuccess()
-
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
