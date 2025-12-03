@@ -107,18 +107,22 @@ class DiaryRepository @Inject constructor(
     }
 
     fun observeRemoteDiaries(): Flow<List<Diary>> {
-        val uid = auth.currentUser?.uid ?: return flowOf(emptyList())
-        return networkMonitor.isOnline.flatMapLatest { online ->
-            if (!online) {
-                flowOf(emptyList())
-            } else {
-                callbackFlow {
-                    val registration = userCollection(uid)
-                        .addSnapshotListener { snapshot, _ ->
-                            val diaries = snapshot?.documents?.mapNotNull { it.toDiarySafe() } ?: emptyList()
-                            trySend(diaries)
-                        }
-                    awaitClose { registration.remove() }
+        val uid = auth.currentUser?.uid
+        return if (uid == null) {
+            flowOf(emptyList())
+        } else {
+            networkMonitor.isOnline.flatMapLatest { online ->
+                if (!online) {
+                    flowOf(emptyList())
+                } else {
+                    callbackFlow {
+                        val registration = userCollection(uid)
+                            .addSnapshotListener { snapshot, _ ->
+                                val diaries = snapshot?.documents?.mapNotNull { it.toDiarySafe() } ?: emptyList()
+                                trySend(diaries)
+                            }
+                        awaitClose { registration.remove() }
+                    }
                 }
             }
         }
