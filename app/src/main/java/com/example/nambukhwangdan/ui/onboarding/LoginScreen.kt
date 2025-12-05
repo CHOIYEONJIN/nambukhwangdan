@@ -228,7 +228,7 @@ fun LoginScreen(
 
         Spacer(Modifier.height(56.dp))
 
-        // 5. 하단 시작하기 버튼 (로그인 상태에 따라 활성화/비활성화)
+
         val buttonColor = if (isLoggedIn) Primary else Grey
         val buttonClickable = isLoggedIn
 
@@ -245,7 +245,6 @@ fun LoginScreen(
                 .background(buttonColor)
                 .clickable(enabled = isLoggedIn) {
                     if(buttonClickable){
-                    // 로그인 성공 시에만 MainHost로 이동하는 onLoginSuccess 콜백 실행
 
                         onLoginSuccess()
                     }

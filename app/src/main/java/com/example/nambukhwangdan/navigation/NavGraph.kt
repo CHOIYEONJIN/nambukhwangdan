@@ -15,9 +15,6 @@ import com.example.nambukhwangdan.screens.home.HomeScreen
 import com.example.nambukhwangdan.screens.journal.JournalScreen
 import com.example.nambukhwangdan.screens.letters.NewLetterScreen
 import com.example.nambukhwangdan.screens.letters.ReplyScreen
-import com.example.nambukhwangdan.screens.onboarding.LoginScreen
-import com.example.nambukhwangdan.screens.onboarding.OnboardingIntroScreen
-import com.example.nambukhwangdan.screens.onboarding.OnboardingNickname
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
 
@@ -26,6 +23,8 @@ fun NavGraph(navController: NavHostController) {
     val diaryViewModel: DiaryViewModel = viewModel()
     val letterViewModel: LetterViewModel = viewModel()
 
+    // NOTE: startDestination을 "DiaryWriteScreen"으로 설정하는 것은 이 NavGraph가
+    // MainScreenHost 내에서 사용될 때 DiaryWrite가 초기 화면이어야 함을 의미합니다.
     NavHost(navController = navController, startDestination = "DiaryWriteScreen") {
 
         composable("list") {
@@ -46,40 +45,19 @@ fun NavGraph(navController: NavHostController) {
         composable(route="AnalyzeResultScreen"){
             AnalyzeResultScreen(
                 viewModel = diaryViewModel,
-                // ⭐️ [수정] 인자 이름을 bottomNavController로 변경하여 Compose 함수의 정의와 일치시킵니다.
+                // AnalyzeResultScreen은 MainHost 내부의 탭 플로우이므로 bottomNavController를 전달
                 bottomNavController = navController
             )
         }
 
-        // NOTE: OnboardingIntroScreen과 OnboardingNickname도 navController와 ViewModel을
-        // 요구할 가능성이 높으므로 인자를 명시적으로 전달합니다. (JournalScreen과 동일 패턴 적용)
-        composable(route="OnboardingScreen"){
-            OnboardingIntroScreen(
-                viewModel = diaryViewModel,
-                navController = navController
-            )
-        }
+        // ❌ [삭제] OnboardingScreen은 AppNavHost에서 관리하므로 중첩 그래프에서 제거합니다.
+        // composable(route="OnboardingScreen"){ ... }
 
-        composable(route="OnboardingNicknameScreen"){
-            OnboardingNickname(
-                viewModel = diaryViewModel,
-                navController = navController
-            )
-        }
+        // ❌ [삭제] OnboardingNicknameScreen은 AppNavHost에서 관리하므로 중첩 그래프에서 제거합니다.
+        // composable(route="OnboardingNicknameScreen"){ ... }
 
-        // ✅ [수정] LoginScreen은 onLoginSuccess 람다를 받도록 수정 (제공된 LoginScreen.kt 파일 참조)
-        composable(route="LoginScreen"){
-            LoginScreen(
-                onLoginSuccess = {
-                    // 로그인 성공 시 DiaryWriteScreen으로 이동하고, 로그인 화면을 백스택에서 제거
-                    navController.navigate("DiaryWriteScreen") {
-                        popUpTo("LoginScreen") { inclusive = true }
-                    }
-                },
-                // 뒤로 가기 동작 (여기서는 이전 화면인 OnboardingIntroScreen으로 돌아가거나 닫기)
-                onBack = { navController.popBackStack() }
-            )
-        }
+        // ❌ [삭제] LoginScreen은 AppNavHost에서 관리하므로 중첩 그래프에서 제거합니다.
+        // composable(route="LoginScreen"){ ... }
 
         composable("NewLetterScreen"){
             NewLetterScreen(
@@ -125,10 +103,5 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // NOTE: HomeScreen이 누락되어 있어 추가합니다. (이름은 임의로 추정)
-        composable("HomeScreen") {
-            // HomeScreen도 NavController나 ViewModel이 필요할 수 있습니다.
-            HomeScreen(navController = navController)
-        }
     }
 }

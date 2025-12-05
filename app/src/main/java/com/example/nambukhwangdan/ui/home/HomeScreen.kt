@@ -70,6 +70,17 @@ fun HomeScreen( viewModel: DiaryViewModel,
     var showPopup by remember { mutableStateOf(false) }
     var selectedLetter by remember { mutableStateOf<Diary?>(null) } // Diary 타입으로 유지
 
+
+    // ⭐️ 임시 '나에게 온 편지' 데이터 (고정 배치용)
+    val testLetterSelf = remember {
+        Diary(
+            id = "temp-self-test-fixed-id",
+            content = "미래의 나에게: 이 편지는 일기 답장 기능 테스트를 위한 '나에게 온 편지'입니다. 오늘의 일기를 작성해 보세요.",
+            createdAt = System.currentTimeMillis() - 86400000, // 어제 날짜로 설정
+            emotion = "기대", // SelfLetterPopup이 호출되도록 emotion 값을 채워줍니다.
+        )
+    }
+
     // ⭐️ 각 편지의 랜덤 위치를 저장하는 맵
     val randomPositions = remember(lettersToReply) {
         lettersToReply.associate { letter ->
@@ -160,6 +171,30 @@ fun HomeScreen( viewModel: DiaryViewModel,
                     )
                 }
             }
+            // ⭐️ 2. 임시 'SelfLetterPopup' 테스트용 고정 배치 아이콘
+            if (lettersToReply.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .size(width = NOTE_WIDTH, height = NOTE_HEIGHT)
+                        // ⭐️ 화면 좌측 상단 근처에 고정 배치
+                        .offset(x = 50.dp, y = 100.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            // 임시 편지를 선택하고 팝업을 띄웁니다.
+                            selectedLetter = testLetterSelf
+                            showPopup = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    // R.drawable.paper3 리소스를 사용
+                    Image(
+                        painter = painterResource(id = R.drawable.paper3),
+                        contentDescription = "임시 테스트 편지",
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+
         }
 
         Spacer(Modifier.weight(1f))
