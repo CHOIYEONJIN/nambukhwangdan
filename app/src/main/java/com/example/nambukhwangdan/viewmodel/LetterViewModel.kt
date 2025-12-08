@@ -13,8 +13,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
 import java.util.UUID
 import javax.inject.Inject
+import java.util.Date
+import kotlinx.coroutines.flow.map
 
 @HiltViewModel
 class LetterViewModel @Inject constructor(
@@ -69,29 +75,33 @@ class LetterViewModel @Inject constructor(
         letterContent.value = text
     }
 
-    // FireStore, RoomDB에 저장
+    // FireStore, RoomDB에 저장 및 알람 예약
     fun persistLetter(): String {
         // letter 고유 id 생성
         val letterId = UUID.randomUUID().toString()
         // 현재 시각 (편지 생성 시각) 저장
         val now = System.currentTimeMillis()
 
-        // ⭐️ 수정: Letter.nickname은 작성자(Sender)의 닉네임(_nicknameToUse.value)을 사용합니다.
+        // ⭐️ Letter.date는 이미 setSelectedDate에서 정확히 계산된 selectedDateMillis.value를 사용
         val letter = Letter(
             id = letterId,
             content = letterContent.value,
             nickname = nicknameToUse.value, // ⭐️ 작성자(Sender) 닉네임 사용
             replyToId = replyToId.value,
             createdAt = now,
-            date = selectedDateMillis.value,
+            date = selectedDateMillis.value, // ⭐️ 정확히 계산된 타임스탬프 사용
             userId = userId ?: ""
         )
 
         viewModelScope.launch {
-            repo.insertLetter(letter) // ← 🔥 DB(Room)에 저장
             val uid = userId
             if (uid != null) {
-                repo.saveLetterToFirestore(letter,uid) // ← 🔥 Firestore에도 저장
+                // repo.saveAndScheduleLetter 함수로 통일하여 DB, Firestore 저장 및 알람 예약을 한번에 처리
+                // 🚨 이 함수가 존재하지 않다면, repo.insertLetter(letter)와 repo.saveLetterToFirestore(letter, uid)를 호출하고, 알람 예약 로직을 직접 호출해야 합니다.
+                repo.saveAndScheduleLetter(letter, uid)
+            } else {
+                Log.e(TAG, "User ID가 null이라 Firestore 저장 및 알람 예약을 건너뜁니다. 로컬 DB에만 저장됩니다.")
+                repo.insertLetter(letter) // 로컬 DB에만 저장 (알람은 예약되지 않음)
             }
         }
         // 이전에 작성한 편지 내용이 남아있지 않도록 ViewModel의 상태를 초기화한다
@@ -103,18 +113,52 @@ class LetterViewModel @Inject constructor(
     // viewModel 초기화 함수
     private fun clearStates() {
         letterContent.value = ""
-        // 이전에 사용된 receiverName 관련 초기화는 제거됨
         replyToId.value = null
         _receiverName.value = "미래의 나" // ⭐️ 수신인 상태 초기화 추가
     }
 
     // 사용자가 달력에서 선택한 날짜의 시간
     val selectedDateMillis = MutableStateFlow(System.currentTimeMillis())
-    // 닐짜 선택 ui에서 받은 선택된 날짜의 millis 값을 달력에서 선택한 날짜를 저장하는 변수의 값으로 업데이트
-    fun setSelectedDate(millis: Long) { selectedDateMillis.value = millis }
+
+    // ⭐️ [최종 수정 로직] 날짜 선택 시 KST 23:00를 기준으로 타임스탬프 계산
+    fun setSelectedDate(dateMillis: Long) {
+        val zoneIdKST = ZoneId.of("Asia/Seoul")
+
+        // 1. DatePicker의 밀리초(UTC 00:00)를 KST 기준으로 LocalDateTime 추출
+        // 이 시점에서 localDateTimeKST는 '선택된 날짜'와 '09:00:00'을 가집니다.
+        val localDateTimeKST = Instant.ofEpochMilli(dateMillis)
+            .atZone(zoneIdKST)
+            .toLocalDateTime()
+
+        // 2. 추출된 날짜 구성요소 (연,월,일)를 유지하고, 시간을 23:00로 재구성
+        // 이 시점에서 시간은 09:00에서 23:00로 바뀝니다.
+        val deliveryDateTimeKST = localDateTimeKST
+            .withHour(23)
+            .withMinute(0)
+            .withSecond(0)
+
+        // 3. 재구성된 KST LocalDateTime에 KST 시간대를 붙여 ZonedDateTime 생성
+        val zonedDateTimeKST = deliveryDateTimeKST.atZone(zoneIdKST)
+
+        // 4. 최종 KST 23:00 타임스탬프 계산
+        val finalTimestamp = zonedDateTimeKST.toInstant().toEpochMilli()
+
+        // Flow에 최종 Long 값 저장
+        selectedDateMillis.value = finalTimestamp
+
+        Log.d(TAG, "DatePicker Input (Raw): ${Date(dateMillis)}")
+        Log.d(TAG, "Final KST 23:00 Timestamp: ${Date(finalTimestamp)}")
+    }
 
     // 모든 편지 목록 (Room/Firestore 동기화)
     val allLetters = repo.getAllLetters()
+        .map { letters ->
+            val now = System.currentTimeMillis()
+            // ⭐️ 핵심 필터링 로직: 도착 시간(letter.date)이 현재 시간(now)보다 작거나 같은 편지만 보여줍니다.
+            letters.filter { letter ->
+                letter.date <= now
+            }
+        }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
@@ -123,10 +167,11 @@ class LetterViewModel @Inject constructor(
 
     // 편지 삭제
     fun deleteLetter(id: String) = viewModelScope.launch {
-        repo.deleteLetter(id)// room에서 삭제
         val uid = userId
         if (uid != null) {
-            repo.deleteLetterFromFirestore(id,uid)// fireStore에서 삭제
+            repo.deleteLetterFully(id, uid)
+        } else {
+            Log.e("ViewModel", "사용자 ID(uid)가 null이라 Firebase 삭제는 건너뜁니다.")
         }
     }
 
@@ -151,7 +196,7 @@ class LetterViewModel @Inject constructor(
             firestore.collection("users")
                 .document(uid)
                 .collection("letters")
-                .addSnapshotListener { snapshot, error -> // ⭐️ 에러 처리 추가
+                .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.e(TAG, "Firestore sync error", error)
                         return@addSnapshotListener

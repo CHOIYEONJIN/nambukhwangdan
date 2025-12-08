@@ -16,12 +16,14 @@ import android.content.Context
 import android.content.Intent
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.os.Build
 import dagger.hilt.android.qualifiers.ApplicationContext // Hilt Context 주입을 위해 필요
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date // Log 출력을 위해 추가
-
+import android.provider.Settings // Settings import 추가
+import android.net.Uri // Uri import 추가
 /**
  * 미래 편지(TomorrowLetter) 데이터에 대한 접근 지점.
  * Room(로컬)과 Firestore(원격) 간의 데이터 관리를 담당합니다.
@@ -153,6 +155,26 @@ class TomorrowLetterRepository @Inject constructor(
     private fun scheduleLetterDelivery(letterId: String, deliveryTimestamp: Long) {
         val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+        // 💡 1. [핵심 수정 부분]: API 31 (Android 12) 이상에서 정확한 알람 권한 확인
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Log.e(TAG, "❌ 정확한 알람 권한이 없어 설정 화면으로 안내합니다.")
+
+                // 🚨 [여기가 누락된 핵심 로직입니다]
+                // 사용자에게 해당 권한을 허용하도록 설정 화면을 띄워줍니다.
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    // 이 플래그를 추가해야 Context(Repository)에서 Activity를 시작할 수 있습니다.
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    // 현재 앱 설정으로 포커스를 맞추기 위해 패키지 이름을 명시합니다.
+                    data = Uri.fromParts("package", applicationContext.packageName, null)
+                }
+                applicationContext.startActivity(intent)
+
+                // 권한 요청 후 함수 종료
+                return
+            }
+        }
+
         val intent = Intent(applicationContext, com.example.nambukhwangdan.LetterDeliveryReceiver::class.java).apply {
             putExtra(EXTRA_LETTER_ID, letterId)
         }
@@ -165,7 +187,7 @@ class TomorrowLetterRepository @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 3. 알람 예약 (정확한 시간 보장)
+        // 3. 알람 예약 (정확한 시간 보장) - 권한이 확인된 후에만 안전하게 호출됩니다.
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP, // 디바이스가 잠자기 상태에서도 깨워서 실행
             deliveryTimestamp,
@@ -173,7 +195,6 @@ class TomorrowLetterRepository @Inject constructor(
         )
         Log.d(TAG, "⏰ Letter $letterId scheduled for ${Date(deliveryTimestamp)}. Delivery Time: ${Date(deliveryTimestamp)}")
     }
-
     /**
      * TomorrowLetter Model을 Firestore 직렬화를 위한 Map으로 변환합니다.
      */

@@ -58,9 +58,7 @@ import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
-// import com.example.nambukhwangdan.viewmodel.LetterState // 👈 이 import는 제거되었습니다.
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -103,6 +101,9 @@ fun NewLetterScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
+
+    // ❌ 불필요한 초기 시간 설정 로직 제거 (주석 처리 또는 삭제)
+    /*
     LaunchedEffect(Unit) {
         val calendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 1)
@@ -111,6 +112,7 @@ fun NewLetterScreen(
         }
         viewModel.setSelectedDate(calendar.timeInMillis)
     }
+    */
 
 
     Box(
@@ -385,6 +387,7 @@ fun NewLetterScreen(
                             Button(
                                 onClick = {
                                     datePickerState.selectedDateMillis?.let {
+                                        // ⭐️ ViewModel에 UTC 자정 밀리초 전달 (ViewModel에서 23:00 KST로 계산)
                                         viewModel.setSelectedDate(it)
                                     }
                                     showCalendar = false
@@ -430,7 +433,7 @@ public fun ExpandableDiaryCard(content: String) {
     }
 }
 // createdAt이 밀리초 단위로 저장되어있기 때문에 사람이 읽을 수 있는 형식의 날짜로 변환시켜주는 함수
-public fun formatDate(time: Long): String { // ⭐️ 이름 변경 및 private 접근 제한자 추가
+public fun formatDate(time: Long): String {
     val sdf = SimpleDateFormat("yyyy년 M월 d일", Locale.getDefault())
     return sdf.format(Date(time))
 }
