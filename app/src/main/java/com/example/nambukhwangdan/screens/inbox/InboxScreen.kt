@@ -29,12 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
-import com.example.nambukhwangdan.model.Diary.*
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
-import com.example.nambukhwangdan.viewmodel.DiaryViewModel
+import com.example.nambukhwangdan.viewmodel.LetterViewModel
+import com.example.nambukhwangdan.model.Letter.Letter // ⭐️ 공식 Letter 모델 임포트
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -43,29 +43,31 @@ import java.util.Locale
 
 val pretendard = FontFamily.Default
 
-typealias Letter = Diary
-
 enum class LetterSortOption(val label: String) {
     TIME_DESC("시간순 (최신순)"),
     TIME_ASC("시간순 (오래된순)"),
-    FAVORITE_FIRST("좋아요 먼저"), // ⭐️ 좋아요로 통일
+    FAVORITE_FIRST("좋아요 먼저"),
 }
 
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun InboxScreen(
-    viewModel: DiaryViewModel,
+    viewModel: LetterViewModel,
     navController: NavHostController
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedSortOption by remember { mutableStateOf(LetterSortOption.TIME_DESC) }
 
-    // ⭐️ allSentLetters 사용 (ViewModel에서 sendToFuture = true 필터링된 목록)
-    val letters by viewModel.allSentLetters.collectAsState(initial = emptyList())
+    // ⭐️ LetterViewModel의 allLetters Flow를 사용합니다.
+    // 주의: 이 Flow는 현재 모든 편지(개인/공용)를 포함할 수 있으므로, 공용 편지함만 원한다면
+    // ViewModel에 'inboundLetters' 같은 별도의 Flow를 구현해야 합니다.
+    val letters: List<Letter> by viewModel.allLetters.collectAsState(initial = emptyList())
+
 
     val filteredLetters = remember(letters, selectedDate, selectedSortOption) {
         val monthlyFiltered = letters.filter { letter ->
+            // createdAt 필드를 사용하여 편지가 작성된 시점을 기준으로 필터링
             val letterDate = Instant.ofEpochMilli(letter.createdAt)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
@@ -76,7 +78,7 @@ fun InboxScreen(
             LetterSortOption.TIME_DESC -> monthlyFiltered.sortedByDescending { it.createdAt }
             LetterSortOption.TIME_ASC -> monthlyFiltered.sortedBy { it.createdAt }
             LetterSortOption.FAVORITE_FIRST -> monthlyFiltered.sortedWith(
-                compareByDescending<Letter> { it.liked } // 좋아요(liked)가 true인 것을 먼저 정렬
+                compareByDescending<Letter> { it.liked }
                     .thenByDescending { it.createdAt }
             )
         }
@@ -125,7 +127,7 @@ fun InboxScreen(
         if (filteredLetters.isEmpty()) {
             EmptyInboxState()
         } else {
-            LetterList(letters = filteredLetters, viewModel = viewModel) // navController 제거
+            LetterList(letters = filteredLetters, viewModel = viewModel)
         }
     }
     // 팝업 구현 영역
@@ -155,7 +157,7 @@ fun InboxScreen(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun LetterList(letters: List<Letter>, viewModel: DiaryViewModel) { // navController 제거
+private fun LetterList(letters: List<Letter>, viewModel: LetterViewModel) {
     LazyColumn(
         modifier = Modifier
             .width(350.dp)
@@ -169,9 +171,9 @@ private fun LetterList(letters: List<Letter>, viewModel: DiaryViewModel) { // na
                 letter = letter,
                 pretendard = pretendard,
                 isExpanded = expanded,
-                onToggleFavorite = { id -> viewModel.toggleLike(id)}, // ⭐️ 좋아요 토글
-                onToggleExpand = {expanded=!expanded}, // ⭐️ 확장/축소 토글
-                onDelete = { id -> viewModel.deleteDiary(id) }
+                onToggleFavorite = { id -> viewModel.toggleLike(id)},
+                onToggleExpand = {expanded=!expanded},
+                onDelete = { id -> viewModel.deleteLetter(id) }
             )
         }
     }
@@ -184,14 +186,13 @@ fun LetterItem(
     pretendard: FontFamily,
     isExpanded: Boolean,
     onToggleFavorite:(String) -> Unit,
-    onToggleExpand: () -> Unit, // ⭐️ 함수명 변경
+    onToggleExpand: () -> Unit,
     onDelete: (String) -> Unit
 ) {
-    // ⭐️ liked를 isFavorite로 간주하고, 좋아요 상태를 사용
     val isFavorite = letter.liked
     val collapsedHeight = 70.dp
 
-    val displayDate = letter.createdAt.dateLabelForInbox()
+    val displayDate = letter.createdAt.dateLabelForInbox() // createdAt 사용
     val favoriteStatus = if (isFavorite) "좋아요 됨" else "좋아요 안 됨"
     val titleText = letter.content.split("\n").firstOrNull().orEmpty()
     val indicatorColor = if (isFavorite) Primary else Grey.copy(alpha = 0.5f)
@@ -201,7 +202,6 @@ fun LetterItem(
             .fillMaxWidth()
             .heightIn(min = if (isExpanded) 0.dp else collapsedHeight)
             .animateContentSize(animationSpec = tween(300))
-            // ⭐️ 클릭 시 확장/축소만 수행
             .clickable { onToggleExpand() },
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -226,7 +226,6 @@ fun LetterItem(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // ⭐️ 좌측 큰 아이콘: 하트 사용
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = favoriteStatus,
@@ -274,11 +273,11 @@ fun LetterItem(
                         color = Color.Black,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = if (isFavorite) FontWeight.Bold else FontWeight.Normal // 좋아요 했으면 굵게
+                        fontWeight = if (isFavorite) FontWeight.Bold else FontWeight.Normal
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = letter.content,
+                        text = "보낸 사람: ${letter.nickname}\n${letter.content}", // 발신자 닉네임과 내용 표시
                         fontFamily = pretendard,
                         fontSize = 14.sp,
                         color = Color.Gray,
@@ -287,7 +286,7 @@ fun LetterItem(
                     )
                 }
 
-                // ⭐️ 우측 토글 아이콘: 하트 사용
+                // 우측 좋아요 토글 아이콘
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Toggle Favorite",
@@ -331,7 +330,7 @@ fun LetterItem(
 }
 
 // -----------------------------------------------------------------------
-// ⭐️ 누락되었던 컴포넌트 정의 (JournalScreen에서 복사)
+// 기존 MonthSelector, SortOptionPill, LetterSortSelectionDialog, dateLabelForInbox, EmptyInboxState는 유지
 // -----------------------------------------------------------------------
 
 @Composable
@@ -384,7 +383,7 @@ fun SortOptionPill(
 ) {
     Row(
         modifier = Modifier
-            .size(width = 90.dp, height = 25.dp) // 넓이 조정
+            .size(width = 90.dp, height = 25.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Surface)
             .clickable(onClick = onClick),

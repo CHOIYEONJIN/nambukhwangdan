@@ -90,7 +90,7 @@ fun NavGraph(navController: NavHostController) {
 
         composable("LetterToTomorrowScreen"){
             LetterToTomorrowScreen(
-                viewModel = letterViewModel,
+                viewModel = diaryViewModel,
                 navController = navController
             )
         }

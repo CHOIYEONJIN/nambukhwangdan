@@ -41,7 +41,8 @@ import com.example.nambukhwangdan.navigation.Routes
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
-import com.example.nambukhwangdan.viewmodel.LetterViewModel
+// LetterViewModel 대신 DiaryViewModel 사용
+import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,59 +51,61 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LetterToTomorrowScreen(
-    viewModel: LetterViewModel = hiltViewModel(),
+    // 1. ViewModel 변경: LetterViewModel -> DiaryViewModel
+    viewModel: DiaryViewModel = hiltViewModel(),
     navController: NavController
 ) {
-    val letterText by viewModel.letterContent.collectAsState()
+    // 2. 상태 이름 변경 가정: letterContent -> tomorrowLetterContent
+    val letterText by viewModel.tomorrowLetterContent.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
     Box(modifier = Modifier
-            .fillMaxSize()
-            .background(color = Background))
+        .fillMaxSize()
+        .background(color = Background))
     {
-    Column(){
-        // 상단 날짜 + indicator
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(15.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(dateStr)
-            }
+        Column(){
+            // 상단 날짜 + indicator
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(15.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(dateStr)
+                }
 
-            // 인디케이터
-            Row(verticalAlignment = Alignment.CenterVertically) {
+                // 인디케이터 (3번째 단계)
+                Row(verticalAlignment = Alignment.CenterVertically) {
 
-                Box(
-                    Modifier
-                        .padding(5.dp)
-                        .size(10.dp)
-                        .background(color = Color.White, shape = CircleShape)
-                )
-                Box(
-                    Modifier
-                        .padding(5.dp)
-                        .size(10.dp)
-                        .background(color = Color.White, shape = CircleShape)
-                )
-                Box(
-                    Modifier
-                        .padding(5.dp)
-                        .width(24.dp)
-                        .height(10.dp)
-                        .background(
-                            color = Primary,
-                            shape = RoundedCornerShape(999.dp)
-                        )
-                )
+                    Box(
+                        Modifier
+                            .padding(5.dp)
+                            .size(10.dp)
+                            .background(color = Color.White, shape = CircleShape)
+                    )
+                    Box(
+                        Modifier
+                            .padding(5.dp)
+                            .size(10.dp)
+                            .background(color = Color.White, shape = CircleShape)
+                    )
+                    Box(
+                        Modifier
+                            .padding(5.dp)
+                            .width(24.dp)
+                            .height(10.dp)
+                            .background(
+                                color = Primary,
+                                shape = RoundedCornerShape(999.dp)
+                            )
+                    )
+                }
             }
-        }
-        // 오늘의 일기 작성 박스
+            // 오늘의 일기 작성 박스
             Spacer(Modifier.height(12.dp))
             Column(
                 modifier = Modifier
@@ -115,8 +118,9 @@ fun LetterToTomorrowScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 TextField(
+                    // 3. 함수 이름 변경 가정: updateContent -> updateTomorrowLetterContent
                     value = letterText,
-                    onValueChange = { viewModel.updateContent(it) },
+                    onValueChange = { viewModel.updateTomorrowLetterContent(it) },
                     placeholder = {
                         Text(
                             text = "내일의 나에게 보낼 편지",
@@ -150,21 +154,22 @@ fun LetterToTomorrowScreen(
             }
         }
 
-            Button(
+        Button(
             onClick = {
-                viewModel.persistLetter()
+                // 4. 저장 함수 변경: persistLetter -> saveTomorrowLetter
+                viewModel.saveTomorrowLetter()
                 navController.navigate(Routes.Home) {
                     popUpTo(Routes.MainHost)
                 }
                 navController.popBackStack(route = "diaryWrite", inclusive = false)
             },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 60.dp)
-                    .fillMaxWidth(0.8f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 60.dp)
+                .fillMaxWidth(0.8f)
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) { Text("저장하기") }
 
     }

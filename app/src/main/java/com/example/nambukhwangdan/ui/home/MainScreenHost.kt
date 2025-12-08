@@ -32,8 +32,8 @@ import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
+import com.example.nambukhwangdan.screens.letters.ReplyScreen // ⭐️ 이 import가 필요합니다.
 
-// TODO: 나머지 탭 화면 (Journal, Inbox, Settings)은 더미 파일 사용
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -73,7 +73,8 @@ fun MainScreenHost(
             // 홈 화면
             composable(Routes.Home) {
                 HomeScreen(
-                    viewModel = diaryViewModel,
+                    viewModel = letterViewModel,
+                    diaryViewModel = diaryViewModel,
                     bottomNavController = bottomNavController)
             }
 
@@ -108,7 +109,7 @@ fun MainScreenHost(
 
             composable(Routes.LetterToTomorrow) {
                 LetterToTomorrowScreen(
-                    viewModel = letterViewModel,
+                    viewModel = diaryViewModel,
                     navController = bottomNavController
                 )
             }
@@ -118,10 +119,15 @@ fun MainScreenHost(
                     bottomNavController=bottomNavController
                 )
             }
-
+            composable(Routes.ReplyScreen) {
+                ReplyScreen(
+                    viewModel = letterViewModel, // LetterViewModel 사용
+                    navController = bottomNavController // 내부 네비게이션 컨트롤러 전달
+                )
+            }
             // 더미 화면
             composable(Routes.Inbox) { InboxScreen(
-                viewModel = diaryViewModel,
+                viewModel = letterViewModel,
                 navController = bottomNavController) }
             composable(Routes.Settings) {
                 SettingsScreen(

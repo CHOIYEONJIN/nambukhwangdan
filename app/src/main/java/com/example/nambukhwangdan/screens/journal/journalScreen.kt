@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
 import com.example.nambukhwangdan.model.Diary.Diary
+import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetter
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Grey
 import com.example.nambukhwangdan.ui.theme.Primary
@@ -69,6 +70,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetterEntity
 
 // 폰트 임시 지정 (실제 폰트 경로에 맞게 수정 필요)
 val pretendard = FontFamily.Default
@@ -77,18 +79,27 @@ val pretendard = FontFamily.Default
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun JournalScreen(
-    viewModel: DiaryViewModel,
+    viewModel: DiaryViewModel, // ⭐️ DiaryViewModel만 사용
     navController: NavHostController
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedSortOption by remember { mutableStateOf(SortOption.TIME_DESC) }
 
-    val diaries by viewModel.allRegularDiaries.collectAsState(initial = emptyList<Diary>())
-    val allLetters by viewModel.allSentLetters.collectAsState(initial = emptyList<Diary>()) // 모든 편지 데이터
+    // ⭐️ 1. 모든 Diary 가져오기 (가시성 문제 해결)
+    val diaries by viewModel.allDiaries.collectAsState(initial = emptyList<Diary>())
 
+    val allTomorrowLetters by viewModel.allTomorrowLetters.collectAsState(initial = emptyList<TomorrowLetter>())
+
+    val letterMap = remember(allTomorrowLetters) {
+        val letters = allTomorrowLetters as List<TomorrowLetter>
+        letters.associateBy { it.id }
+    }
+
+    // ⭐️ 4. 모든 diaries를 기반으로 필터링 및 정렬합니다.
     val filteredDiaries = remember(diaries, selectedDate, selectedSortOption) {
         val monthlyFiltered = diaries.filter { diary ->
-            val diaryDate = Instant.ofEpochMilli(diary.createdAt)
+            // diary.date 필드를 사용하는 것이 정확합니다.
+            val diaryDate = Instant.ofEpochMilli(diary.date)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
             diaryDate.year == selectedDate.year && diaryDate.monthValue == selectedDate.monthValue
@@ -104,10 +115,9 @@ fun JournalScreen(
     var showMonthPopup by remember { mutableStateOf(false) }
     var showSortPopup by remember { mutableStateOf(false) }
 
-    // ⭐️ 3. UI에 표시할 월 정보는 selectedDate에서 가져옴
     val currentMonthNumber = selectedDate.monthValue
     val currentMonthEnglish = selectedDate.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH)
-    val currentSortOptionLabel = selectedSortOption.label.split(" ").first() // "시간순", "좋아요순"
+    val currentSortOptionLabel = selectedSortOption.label.split(" ").first()
 
     Column(
         modifier = Modifier
@@ -118,7 +128,6 @@ fun JournalScreen(
     ) {
         Spacer(modifier = Modifier.height(50.dp))
 
-        // UI 영역 (MonthSelector 클릭 시 showMonthPopup = true)
         Row(
             modifier = Modifier
                 .width(350.dp)
@@ -142,13 +151,13 @@ fun JournalScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (filteredDiaries.isEmpty()) { // ⭐️ 필터링된 목록 사용
+        if (filteredDiaries.isEmpty()) {
             EmptyJournalState()
         } else {
-            // ⭐️ DiaryList에 모든 편지 목록을 전달
+            // ⭐️ DiaryList에 생성한 TomorrowLetter Map을 전달합니다.
             DiaryList(
                 diaries = filteredDiaries,
-                allLetters = allLetters,
+                letterMap = letterMap,
                 viewModel = viewModel
             )
         }
@@ -156,10 +165,9 @@ fun JournalScreen(
 
     if (showMonthPopup) {
         MonthOnlyDatePickerDialog(
-            initialDate = selectedDate, // 현재 선택된 날짜를 초기값으로 전달
+            initialDate = selectedDate,
             onDismissRequest = { showMonthPopup = false },
             onDateSelected = { year, monthNumber ->
-                // 선택된 년도와 월을 selectedDate에 반영하고 1일로 설정
                 selectedDate = LocalDate.of(year, monthNumber, 1)
                 showMonthPopup = false
             }
@@ -171,7 +179,7 @@ fun JournalScreen(
             currentSortOption = selectedSortOption,
             onDismissRequest = { showSortPopup = false },
             onOptionSelected = { newOption ->
-                selectedSortOption = newOption // 선택된 옵션 업데이트 (자동 재정렬)
+                selectedSortOption = newOption
                 showSortPopup = false
             }
         )
@@ -309,12 +317,11 @@ fun SortSelectionDialog(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun DiaryList(diaries: List<Diary>, allLetters: List<Diary>, viewModel: DiaryViewModel) {
-    // ⭐️ 맵을 사용하여 편지 ID로 내용을 빠르게 찾을 수 있도록 준비합니다.
-    val letterMap = remember(allLetters) {
-        allLetters.associateBy { it.id }
-    }
-
+private fun DiaryList(
+    diaries: List<Diary>,
+    letterMap: Map<String, TomorrowLetter>,
+    viewModel: DiaryViewModel
+){
     LazyColumn(
         modifier = Modifier
             .width(350.dp)
@@ -325,10 +332,12 @@ private fun DiaryList(diaries: List<Diary>, allLetters: List<Diary>, viewModel: 
         items(diaries, key = { it.id }) { diary ->
             var expanded by rememberSaveable(diary.id) { mutableStateOf(false) }
 
-            // ⭐️ 해당 일기(diary)가 참조한 원본 편지(letter)의 내용을 찾습니다.
+            // ⭐️ 해당 일기(diary)가 참조한 원본 TomorrowLetter의 내용을 찾습니다.
             val originalLetterContent = remember(diary.replyToId, letterMap) {
-                // replyToId가 null이 아니면, letterMap에서 해당 ID의 편지 내용을 찾고, 없으면 "원본 편지 없음"을 반환합니다.
-                diary.replyToId?.let { letterMap[it]?.content } ?: "원본 편지 없음"
+                // diary.replyToId가 TomorrowLetter의 ID를 담고 있습니다.
+                diary.replyToId?.let { letterId ->
+                    letterMap[letterId]?.content ?: "원본 편지 (ID: $letterId) 내용을 찾을 수 없습니다."
+                } ?: "원본 편지 없음 (일반 일기)"
             }
 
             DiaryItem(
@@ -361,13 +370,12 @@ fun DiaryItem(
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
-    // ✅ 충돌 해결: diary.createdAt 기반으로 날짜 정보 생성
     val displayMonthAndDay = Instant.ofEpochMilli(diary.createdAt)
         .atZone(ZoneId.systemDefault())
         .toLocalDate()
         .format(DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN))
 
-    val displayDayAndDayOfWeek = diary.createdAt.dayLabelForInbox() // 예: "25 수"
+    val displayDayAndDayOfWeek = diary.createdAt.dayLabelForInbox()
     val emotionText = diary.sticker.orEmpty().ifBlank { "💭" }
 
     Card(
@@ -385,13 +393,12 @@ fun DiaryItem(
             horizontalAlignment = Alignment.Start
         ) {
 
-            // ⭐️ 접힌 상태 Row (충돌 없음)
             if (!isExpanded) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(collapsedHeight) // ⭐️ 접힌 상태의 고정 높이 유지
-                        .padding(end = 16.dp), // 좋아요 아이콘을 위한 오른쪽 패딩 추가
+                        .height(collapsedHeight)
+                        .padding(end = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
@@ -430,17 +437,15 @@ fun DiaryItem(
                         }
                     }
 
-                    // 구분선
                     Spacer(modifier = Modifier
                         .width(1.dp)
                         .height(50.dp)
                         .background(Grey))
 
-                    // ⭐️ 본문만 2줄 표시 영역
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight() // 부모 Row 높이에 맞게 채움
+                            .fillMaxHeight()
                             .padding(start = 10.dp, end = 10.dp),
                         horizontalAlignment = Alignment.Start,
                         verticalArrangement = Arrangement.Center
@@ -455,7 +460,6 @@ fun DiaryItem(
                         )
                     }
 
-                    // ⭐️ 좋아요 아이콘
                     Icon(
                         imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Favorite",
@@ -468,20 +472,17 @@ fun DiaryItem(
             }
 
 
-            // ⭐️ 확장된 상세 내용 영역 (Expanded State)
             if (isExpanded) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    // 1. 헤더 (날짜 및 수정/삭제 아이콘 + 감정 배지 통합)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // ⭐️ 'n월 n일 의 일기' 텍스트 + 감정 배지
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "$displayMonthAndDay 의 일기",
@@ -489,14 +490,12 @@ fun DiaryItem(
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            // 감정 배지 통합
                             diary.sentimentLabel?.let { label ->
                                 Spacer(modifier = Modifier.width(8.dp))
                                 SentimentBadge(label)
                             }
                         }
 
-                        // ⭐️ 수정 및 삭제 아이콘
                         Row {
                             Icon(
                                 imageVector = Icons.Default.Edit,
@@ -520,9 +519,8 @@ fun DiaryItem(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 2. 원본 편지 내용 (어제 편지)
+                    // ⭐️ 원본 편지 내용 표시
                     Text(
-                        // ⭐️ 실제 원본 편지 내용을 표시합니다.
                         text = "원본 편지: ${originalLetterContent}",
                         fontFamily = pretendard,
                         fontSize = 13.sp,
@@ -533,7 +531,6 @@ fun DiaryItem(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // 3. 사진 Placeholder 3개 (실제 로직으로 변경 필요)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -554,23 +551,20 @@ fun DiaryItem(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 4. 일기 전문
                     Text(
                         text = diary.content,
                         fontFamily = pretendard,
                         fontSize = 14.sp,
                         color = Color.DarkGray,
-                        lineHeight = 22.sp // 가독성 향상
+                        lineHeight = 22.sp
                     )
 
-                    // ⭐️ 확장된 내용의 하단 공간 확보
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
 }
-
 
 
 @Composable
@@ -589,7 +583,6 @@ private fun SentimentBadge(label: String) {
         Text(text = label, color = color, fontSize = 10.sp)
     }
 }
-// --- 유틸리티 함수 (날짜 포매팅) ---
 @RequiresApi(Build.VERSION_CODES.O)
 private fun Long.dayLabelForInbox(): String {
     val date = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -597,7 +590,6 @@ private fun Long.dayLabelForInbox(): String {
     return formatter.format(date)
 }
 
-// --- Empty State 컴포넌트 ---
 @Composable
 private fun EmptyJournalState() {
     Column(

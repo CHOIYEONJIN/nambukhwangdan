@@ -66,8 +66,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.nambukhwangdan.navigation.Routes
-import com.example.nambukhwangdan.screens.letters.ExpandableDiaryCard
-import com.example.nambukhwangdan.screens.letters.formatDate
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
@@ -85,11 +83,11 @@ fun DiaryWriteScreen(
     bottomNavController: NavController
 ) {
     val selectedUris by viewModel.selectedUris.collectAsState()
-    val pastLetters by viewModel.allDiaries.collectAsState() // allDiaries로 변경 (LetterViewModel이 아님)
+    val pastDiaries by viewModel.allDiaries.collectAsState() // allDiaries 사용
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
-    val isAnalyzing by viewModel.isAnalyzing.collectAsState() // drawing의 collectAsState 사용
+    val isAnalyzing by viewModel.isAnalyzing.collectAsState()
 
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
@@ -100,7 +98,7 @@ fun DiaryWriteScreen(
         SimpleDateFormat("yyyy년 M월 d일", Locale.KOREA)
             .format(Date(pickedMillis))
     }
-    // ✅ 분석 결과 도착 시 화면 이동 (상단에 있던 기존 로직 유지)
+    // ✅ 분석 결과 도착 시 화면 이동
     LaunchedEffect(viewModel.detectedSentiment.collectAsState().value) {
         if (viewModel.detectedSentiment.value != null) {
             bottomNavController.navigate(Routes.AnalyzeResult)
@@ -117,17 +115,20 @@ fun DiaryWriteScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 3),
         onResult = { uris ->
-            val merged = (selectedUris + uris).distinct().take(3)  // 기존 + 신규 + 중복 제거
+            val merged = (selectedUris + uris).distinct().take(3)
             viewModel.setSelectedUris(merged)
         }
     )
+
+    // 📌 원본 로직 유지: 스크린 진입 시 일기 작성 상태 초기화
     LaunchedEffect(Unit) {
         viewModel.updateDiary("")   // 항상 입력 칸은 빈칸
     }
+
     val replyToId by viewModel.replyToId.collectAsState()
 
-// pastLetters (allDiaries) 중 replyToId와 동일한 id를 가진 것만 필터링
-    val replyLetter = pastLetters.find { it.id == replyToId }
+    // pastDiaries 중 replyToId와 동일한 id를 가진 Diary 객체 찾기
+    val replyDiary = pastDiaries.find { it.id == replyToId }
 
 
     Box(
@@ -195,8 +196,8 @@ fun DiaryWriteScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 특정 편지 하나만 보여주기
-                replyLetter?.let { letter ->
+                // 특정 편지 하나만 보여주기 (답장의 대상이 되는 일기)
+                replyDiary?.let { diaryItem ->
                     item {
                         Column(
                             modifier = Modifier
@@ -207,12 +208,19 @@ fun DiaryWriteScreen(
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // nickname은 Diary 모델에 추가되었으므로 사용 가능
+                            // diaryItem.userId의 앞 4글자로 임시 닉네임 생성 (실제 닉네임 필드가 없으므로)
+                            val displayNickname = if (diaryItem.userId.length >= 4) {
+                                "${diaryItem.userId.substring(0, 4)}..."
+                            } else {
+                                "나"
+                            }
+
                             Text(
-                                "${formatDate(letter.createdAt)}의 ${letter.nickname}에게서 온 편지",
+                                // userId를 기반으로 임시 닉네임 표시
+                                "${formatDate(diaryItem.createdAt)}의 ${displayNickname}에게서 온 편지",
                                 fontWeight = FontWeight.SemiBold
                             )
-                            ExpandableDiaryCard(letter.content)
+                            ExpandableDiaryCard(diaryItem.content)
                         }
                     }
                 }
@@ -230,7 +238,7 @@ fun DiaryWriteScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        // 📌 1) 사진 / 아이콘을 담는 영역 (clickable 제거)
+                        // 📌 1) 사진 / 아이콘을 담는 영역
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -413,7 +421,7 @@ fun DiaryWriteScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),// 기존 화면에 투명도 50의 검은 색 레이어를 씌움
+                    .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 Card(
@@ -489,6 +497,7 @@ fun DiaryWriteScreen(
         }
     }
 }
+
 @Composable
 fun ExpandableDiaryCard(content: String) {
     var expanded by remember { mutableStateOf(false) }
@@ -519,7 +528,8 @@ fun ExpandableDiaryCard(content: String) {
         }
     }
 }
-//createdAt이 밀리초 단위로 저장되어있기 때문에 사람이 읽을 수 있는 형식의 날짜로 변환시켜주는 함수
+
+// createdAt이 밀리초 단위로 저장되어있기 때문에 사람이 읽을 수 있는 형식의 날짜로 변환시켜주는 함수
 fun formatDate(time: Long): String {
     val sdf = SimpleDateFormat("yyyy년 M월 d일", Locale.getDefault())
     return sdf.format(Date(time))
