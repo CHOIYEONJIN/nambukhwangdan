@@ -150,7 +150,7 @@ fun HomeScreen(
     ) {
         // 1. 배경 이미지
         Image(
-            painter = painterResource(id = R.drawable.bg),
+            painter = painterResource(id = R.drawable.bg2),
             contentDescription = "배경 이미지",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -163,7 +163,7 @@ fun HomeScreen(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
 
             // ⭐️ 알림 바: 총 아이템 수에 따라 표시
@@ -207,6 +207,16 @@ fun HomeScreen(
                 // 편지가 없을 때 공백
                 Spacer(modifier = Modifier.height(25.dp))
             }
+            Spacer(modifier = Modifier.height(15.dp))
+
+
+            val logoPainter = painterResource(id = R.drawable.titlewhite)
+            Image(
+                painter = logoPainter,
+                contentDescription = "앱 로고",
+                modifier = Modifier
+                    .size(width = 250.dp, height = 48.dp)
+            )
 
             // Spacer 25
             Spacer(modifier = Modifier.height(50.dp))
