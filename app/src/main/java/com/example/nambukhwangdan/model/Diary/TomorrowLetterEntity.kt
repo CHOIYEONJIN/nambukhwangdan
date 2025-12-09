@@ -22,4 +22,6 @@ data class TomorrowLetterEntity(
     val userId: String,
 
     val isDelivered: Boolean = false
+
+
 )

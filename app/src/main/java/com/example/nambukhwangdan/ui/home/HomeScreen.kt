@@ -55,7 +55,11 @@ import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import kotlin.random.Random
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 
 // ⭐️ 클릭된 아이템의 타입을 구분하기 위한 Wrapper 클래스 (모델 통합)
 sealed class ActionableItem {
@@ -96,7 +100,15 @@ fun HomeScreen(
     val actionableItems = remember(lettersToProcess, tomorrowLettersToProcess) {
         val letterList = lettersToProcess.map { ActionableItem.ActionableLetter(it) }
         val tomorrowList = tomorrowLettersToProcess.map { ActionableItem.ActionableTomorrowLetter(it) }
-        letterList + tomorrowList
+
+        val combinedList = letterList + tomorrowList
+
+        if (tomorrowList.isEmpty()) {
+            val dummyLetter = TomorrowLetter.createDummy(userId = "")
+            listOf(ActionableItem.ActionableTomorrowLetter(dummyLetter))
+        } else {
+            combinedList
+        }
     }
 
     val unrepliedCount = actionableItems.size
@@ -197,8 +209,12 @@ fun HomeScreen(
                             Text(
                                 text = unrepliedCount.toString(), // ⭐️ 총 아이템 수
                                 fontFamily = pretendard,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = 10.sp,
-                                color = Color.White
+                                textAlign = TextAlign.Center,
+                                lineHeight = 10.sp,
+                                color = Color.White,
+                                modifier = Modifier.offset(y = (-0.5).dp)
                             )
                         }
                     }
@@ -218,13 +234,12 @@ fun HomeScreen(
                     .size(width = 250.dp, height = 48.dp)
             )
 
-            // Spacer 25
-            Spacer(modifier = Modifier.height(50.dp))
+            Spacer(modifier = Modifier.height(80.dp))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(BOUNDARY_HEIGHT.dp)
+                    .weight(1f)
             ) {
                 // ⭐️ 통합 목록을 순회하며 편지 아이콘을 생성
                 actionableItems.forEach { item ->
@@ -254,8 +269,8 @@ fun HomeScreen(
                         Image(
                             painter = painterResource(id = imageResourceId),
                             contentDescription = when(item) {
-                                is ActionableItem.ActionableLetter -> "다른 사람에게 온 편지"
-                                is ActionableItem.ActionableTomorrowLetter -> "미래의 나에게 온 편지"
+                                is ActionableItem.ActionableLetter -> "누군가가 보낸 편지"
+                                is ActionableItem.ActionableTomorrowLetter -> "어제의 내가 보낸 편지"
                             },
                             modifier = Modifier
                                 .size(width = NOTE_WIDTH, height = NOTE_HEIGHT)
@@ -276,60 +291,7 @@ fun HomeScreen(
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
-
-            Box(
-
-                modifier = Modifier
-
-                    .width(300.dp)
-
-                    .height(50.dp)
-
-                    .clip(RoundedCornerShape(25.dp))
-
-                    .background(Color.Transparent), // 배경을 투명하게 하거나 Primary로 설정
-
-                contentAlignment = Alignment.Center
-
-            ) {
-
-                Button(
-
-                    onClick = {
-
-// 무조건 DiaryWrite로 이동
-
-                        bottomNavController.navigate(Routes.DiaryWrite)
-
-                    },
-
-// Primary 색상 사용
-
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary, contentColor = Color.White),
-
-                    modifier = Modifier.fillMaxSize()
-
-                ) {
-
-                    Text(
-
-                        text = "일기 쓰기 시작 (테스트)",
-
-                        fontFamily = pretendard,
-
-                        fontSize = 16.sp,
-
-                        color = Color.White
-
-                    )
-
-                }
-
-            }
-            Spacer(modifier = Modifier.height(10.dp)) // 두 버튼 사이에 간격 추가
-
-
+            Spacer(modifier = Modifier.height(20.dp))
 
             Box(
                 modifier = Modifier
@@ -344,7 +306,7 @@ fun HomeScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Primary, contentColor = Color.White)
                 ) {
                     Text(
-                        text = "미래의 나에게 편지 쓰러가기",
+                        text = "유리병 편지 쓰기",
                         fontFamily = pretendard,
                         fontSize = 16.sp,
                         color = Color.White
@@ -409,9 +371,14 @@ fun SelfLetterPopup(
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val titleText = if (letter.id == TomorrowLetter.FIRST_DIARY_DUMMY_ID) {
+                "첫 일기를 작성해 볼까요?"
+            } else {
+                "${formatDate(letter.deliveryTimestamp)}의 나에게서 온 편지"
+            }
             // ⭐️ 제목: TomorrowLetter의 전달 날짜 사용
             Text(
-                text = "💌 ${formatDate(letter.deliveryTimestamp)}의 나에게서 온 편지",
+                text = titleText,
                 fontFamily = pretendard, fontSize = 20.sp, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -433,7 +400,7 @@ fun SelfLetterPopup(
                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
                 Text(
-                    "오늘의 일기 쓰기 (이 편지에 대한 응답)",
+                    "오늘의 일기 쓰기",
                     fontFamily = pretendard,
                     fontSize = 18.sp,
                     color = Color.White
@@ -486,7 +453,7 @@ fun OtherLetterPopup(
         ) {
             // 제목: 남에게서 온 편지 (닉네임 사용)
             Text(
-                text = "💌 ${formatDate(letter.createdAt)}에 ${letter.nickname}님에게서 온 편지",
+                text = "${formatDate(letter.createdAt)}에 ${letter.nickname}님에게서 온 편지",
                 fontFamily = pretendard, fontSize = 20.sp, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -508,7 +475,7 @@ fun OtherLetterPopup(
                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
                 Text(
-                    "답장하기 (다른 사용자에게 답장)",
+                    "답장하기",
                     fontFamily = pretendard,
                     fontSize = 18.sp,
                     color = Color.White
