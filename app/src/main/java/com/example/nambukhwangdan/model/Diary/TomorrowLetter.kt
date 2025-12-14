@@ -38,7 +38,6 @@ data class TomorrowLetter(
         const val FIRST_DIARY_DUMMY_ID = "DUMMY_FIRST_DIARY"
 
         fun createDummy(userId: String): TomorrowLetter {
-            // 현재 시간을 KST로 설정하여 deliveryTimestamp를 만듭니다.
             val nowKST = Instant.now()
                 .atZone(ZoneId.of("Asia/Seoul"))
                 .toInstant()
