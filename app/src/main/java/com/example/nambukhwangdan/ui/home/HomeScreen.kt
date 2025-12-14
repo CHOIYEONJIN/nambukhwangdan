@@ -99,16 +99,17 @@ fun HomeScreen(
 
     val actionableItems = remember(lettersToProcess, tomorrowLettersToProcess) {
         val letterList = lettersToProcess.map { ActionableItem.ActionableLetter(it) }
+
         val tomorrowList = tomorrowLettersToProcess.map { ActionableItem.ActionableTomorrowLetter(it) }
 
-        val combinedList = letterList + tomorrowList
-
-        if (tomorrowList.isEmpty()) {
+        val dummyList = if (tomorrowList.isEmpty()) {
             val dummyLetter = TomorrowLetter.createDummy(userId = "")
             listOf(ActionableItem.ActionableTomorrowLetter(dummyLetter))
         } else {
-            combinedList
+            emptyList()
         }
+
+        letterList + tomorrowList + dummyList
     }
 
     val unrepliedCount = actionableItems.size
