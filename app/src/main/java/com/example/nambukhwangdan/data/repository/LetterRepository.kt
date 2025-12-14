@@ -152,22 +152,64 @@ class LetterRepository @Inject constructor(
         senderNickname: String,
         content: String
     ) {
-        val receiverId = FirebaseFunctionsSource().pickRandomUser()
+        val receiverId = try {
+            FirebaseFunctionsSource().pickRandomUser() // ⭐️ 랜덤 유저 ID 가져오기
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "❌ pickRandomUser Cloud Function 호출 실패", e)
+            null // 실패 시 null 반환
+        }
 
-        val letter = hashMapOf(
-            "senderId" to senderId,
-            "receiverId" to receiverId,
-            "content" to content,
-            "nickname" to senderNickname,
-            "sendAt" to FieldValue.serverTimestamp()
+        // 🚨 1. 수신자 ID 유효성 검사
+        if (receiverId.isNullOrEmpty()) {
+            Log.e("LetterRepo", "❌ 랜덤 수신자를 찾을 수 없습니다. (유저 수 부족 또는 서버 오류)")
+            return // 전송 중단
+        }
+
+        val letterId = UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+
+        // ⭐️ Letter 모델을 사용하여 데이터 일관성 유지
+        val baseLetter = Letter(
+            id = letterId,
+            content = content,
+            nickname = senderNickname,
+            createdAt = now,
+            date = now, // 즉시 도착 (도착 시간)
+            userId = receiverId, // ⭐️ 이 편지의 '소유자' ID (컬렉션 주인)
+            replyToId = null,
+            liked = false
         )
 
-        firestore.collection("users")
-            .document(receiverId)
-            .collection("letters")
-            .document(UUID.randomUUID().toString())
-            .set(letter)
-            .await()
+        // 2. 🔥 [수신자에게 저장]: 'letters' (받은 편지함)
+        try {
+            firestore.collection("users")
+                .document(receiverId)
+                .collection("letters")
+                .document(letterId)
+                .set(baseLetter) // ⭐️ Letter 모델 객체 저장
+                .await()
+            Log.d("LetterRepo", "✅ 수신자($receiverId)에게 편지 저장 성공")
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "❌ 수신자에게 편지 저장 실패", e)
+            // 수신자에게 저장 실패 시 발신자에게도 저장하지 않도록 여기서 return 가능
+            return
+        }
+
+        // 3. 🔥 [발신자에게 저장]: 'sent_letters' (보낸 편지 기록)
+        // 보낸 사람 컬렉션에 저장할 때는 userId를 senderId로 변경하여 저장
+        val letterForSender = baseLetter.copy(userId = senderId)
+
+        try {
+            firestore.collection("users")
+                .document(senderId)
+                .collection("sent_letters") // ⭐️ 'sent_letters' 컬렉션 사용
+                .document(letterId)
+                .set(letterForSender) // ⭐️ Letter 모델 객체 저장
+                .await()
+            Log.d("LetterRepo", "✅ 발신자($senderId)에게 편지 저장 성공")
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "❌ 발신자에게 편지 저장 실패", e)
+        }
     }
 
 

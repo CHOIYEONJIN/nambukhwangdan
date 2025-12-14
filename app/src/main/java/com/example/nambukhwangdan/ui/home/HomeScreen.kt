@@ -215,7 +215,7 @@ fun HomeScreen(
                                 textAlign = TextAlign.Center,
                                 lineHeight = 10.sp,
                                 color = Color.White,
-                                modifier = Modifier.offset(y = (-0.5).dp)
+                                //modifier = Modifier.offset(y = (-0.5).dp)
                             )
                         }
                     }
