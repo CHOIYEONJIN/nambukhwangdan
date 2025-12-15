@@ -51,7 +51,10 @@ class LetterDeliveryReceiver : BroadcastReceiver() {
     private suspend fun processAndNotify(context: Context, letterId: String) {
         // 1. 편지 조회
         val letter = repository.getTomorrowLetterById(letterId)
-
+        if (letter == null) {
+            Log.w("DeliveryReceiver", "삭제된 편지 → 알람 처리 중단")
+            return
+        }
         if (letter != null) {
             // 2. 편지 상태 업데이트 (전달됨으로 표시)
             // (ViewModel이 처리하는 것이 일반적이나, 여기서는 Receiver에서 직접 호출)
@@ -70,6 +73,17 @@ class LetterDeliveryReceiver : BroadcastReceiver() {
     // ⭐️ 시스템 알림 생성 로직
     // -------------------------------------------------------------
     private fun showNotification(context: Context, letterId: String, content: String) {
+        // 🔴 Android 13+ 알림 권한 체크
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission =
+                context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                        android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (!hasPermission) {
+                Log.w(TAG, "POST_NOTIFICATIONS 권한 없음 → 알림 스킵")
+                return
+            }
+        }
 
         // 1. 알림 내용 구성
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)

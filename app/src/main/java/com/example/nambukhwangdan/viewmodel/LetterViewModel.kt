@@ -11,16 +11,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
+import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
-import java.util.Date
-import kotlinx.coroutines.flow.map
 
 @HiltViewModel
 class LetterViewModel @Inject constructor(
@@ -168,11 +166,25 @@ class LetterViewModel @Inject constructor(
     // 편지 삭제
     fun deleteLetter(id: String) = viewModelScope.launch {
         val uid = userId
-        if (uid != null) {
-            repo.deleteLetterFully(id, uid)
-        } else {
-            Log.e("ViewModel", "사용자 ID(uid)가 null이라 Firebase 삭제는 건너뜁니다.")
+
+        if (uid == null) {
+            Log.e(TAG, "❌ userId null → 삭제 중단 (Room/Firebase 둘 다 안 건드림)")
+            return@launch
         }
+
+        // 🔴 1. Firestore 먼저 삭제
+        val firebaseDeleted = repo.deleteLetterFromFirestore(id, uid)
+
+        if (!firebaseDeleted) {
+            Log.e(TAG, "❌ Firestore 삭제 실패 → Room 삭제 금지")
+            return@launch
+        }
+
+        // 🔴 2. Firestore 삭제 성공했을 때만
+        repo.cancelScheduledLetter(id)
+        repo.deleteLetter(id)
+
+        Log.i(TAG, "✅ Firestore + Room 삭제 완료")
     }
 
     // 편지에 좋아요 누르는 기능
@@ -191,26 +203,26 @@ class LetterViewModel @Inject constructor(
 
     // room과 fireStore에 저장된 data를 동기화하는 함수
     fun syncLettersFromFirestore() {
-        val uid = userId
-        if (uid != null) {
-            firestore.collection("users")
-                .document(uid)
-                .collection("letters")
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        Log.e(TAG, "Firestore sync error", error)
-                        return@addSnapshotListener
-                    }
-                    if (snapshot != null) {
-                        viewModelScope.launch {
-                            for (doc in snapshot.documents) {
-                                val letter = doc.toObject(Letter::class.java)
-                                if (letter != null) repo.insertLetter(letter)
-                            }
+        val uid = userId ?: return
+
+        firestore.collection("users")
+            .document(uid)
+            .collection("letters")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                viewModelScope.launch {
+                    for (doc in snapshot.documents) {
+                        val letter = doc.toObject(Letter::class.java) ?: continue
+
+                        // 🔴 이미 로컬에 있는 것만 update / 없는 것만 insert
+                        val exists = repo.existsLetter(letter.id)
+                        if (!exists) {
+                            repo.insertLetter(letter)
                         }
                     }
                 }
-        }
+            }
     }
 
     // 랜덤 유저에게 편지를 전송하는 시스템

@@ -7,21 +7,19 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
-import coil.util.CoilUtils.result
-import com.example.nambukhwangdan.LetterDeliveryReceiver // ⭐️ Receiver import
+import com.example.nambukhwangdan.LetterDeliveryReceiver
 import com.example.nambukhwangdan.data.FirebaseFunctionsSource
 import com.example.nambukhwangdan.data.local.LetterDao
 import com.example.nambukhwangdan.model.Letter.Letter
 import com.example.nambukhwangdan.model.Letter.toEntity
 import com.example.nambukhwangdan.model.Letter.toLetter
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 import java.util.UUID
-import java.util.Date // Date import
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -69,10 +67,15 @@ class LetterRepository @Inject constructor(
 
     suspend fun deleteLetter(id: String) = letterDao.deleteLetter(id)
 
-    suspend fun deleteLetterFully(id: String, userId: String) {
-        letterDao.deleteLetter(id)
+    suspend fun deleteLetterFully(id: String, userId: String): Boolean {
+        return try {
         cancelScheduledLetter(id)
+        letterDao.deleteLetter(id)
         deleteLetterFromFirestore(id, userId)
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "deleteLetterFully 오류", e)
+            false
+        }
     }
 
     // 편지 쓰기 플로우를 위한 통합 함수
@@ -210,6 +213,9 @@ class LetterRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e("LetterRepo", "❌ 발신자에게 편지 저장 실패", e)
         }
+    }
+    suspend fun existsLetter(id: String): Boolean {
+        return letterDao.exists(id)
     }
 
 
