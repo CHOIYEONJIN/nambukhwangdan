@@ -168,10 +168,22 @@ class LetterViewModel @Inject constructor(
     // 편지 삭제
     fun deleteLetter(id: String) = viewModelScope.launch {
         val uid = userId
-        if (uid != null) {
-            repo.deleteLetterFully(id, uid)
-        } else {
-            Log.e("ViewModel", "사용자 ID(uid)가 null이라 Firebase 삭제는 건너뜁니다.")
+        try {
+            // Firestore 연동이 가능한 경우: 로컬 삭제 + 알람 취소 + Firestore 삭제를 한 번에 처리
+            // (중복으로 Room을 지우면 Home 화면으로 돌아갈 때 이미 삭제된 레코드를 다시 찾으면서 예외가 발생할 수 있음)
+            if (uid != null) {
+                val success = repo.deleteLetterFully(id, uid)
+                if (!success) {
+                    Log.e(TAG, "Firebase 삭제 실패 – Home 화면 재진입 시 동기화 오류가 발생할 수 있습니다")
+                }
+            } else {
+                // 로그인 정보가 없을 때는 로컬만 삭제
+                repo.deleteLetter(id)
+                repo.cancelScheduledLetter(id)
+                Log.e(TAG, "사용자 ID(uid)가 null이라 Firebase 삭제는 건너뜁니다.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "InboxScreen 삭제 처리 중 예외 발생 – Home 화면 크래시 방지를 위해 무시", e)
         }
     }
 

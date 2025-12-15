@@ -69,10 +69,15 @@ class LetterRepository @Inject constructor(
 
     suspend fun deleteLetter(id: String) = letterDao.deleteLetter(id)
 
-    suspend fun deleteLetterFully(id: String, userId: String) {
-        letterDao.deleteLetter(id)
-        cancelScheduledLetter(id)
-        deleteLetterFromFirestore(id, userId)
+    suspend fun deleteLetterFully(id: String, userId: String): Boolean {
+        return try {
+            letterDao.deleteLetter(id)
+            cancelScheduledLetter(id)
+            deleteLetterFromFirestore(id, userId)
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "deleteLetterFully 오류", e)
+            false
+        }
     }
 
     // 편지 쓰기 플로우를 위한 통합 함수
