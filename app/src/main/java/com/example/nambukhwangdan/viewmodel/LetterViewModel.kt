@@ -68,67 +68,48 @@ class LetterViewModel @Inject constructor(
         replyToId.value = id
     }
 
-    fun handleReplySentSuccessfully() {
+    suspend fun handleReplySentSuccessfully() {
         val idToMark = replyToId.value
 
-        // 1. 답장 대상 ID가 존재하는지 확인 (새 편지가 아니라 답장인 경우)
         if (idToMark != null) {
-            viewModelScope.launch {
-                try {
-                    // ⭐️ Repository를 통해 Room DB의 isReplied 상태를 true로 업데이트
-                    repo.markLetterAsReplied(idToMark)
-                    Log.d(TAG, "✅ 원본 편지 $idToMark: 답장 완료 상태(isReplied=true)로 업데이트됨.")
-                } catch (e: Exception) {
-                    Log.e(TAG, "답장 완료 상태 업데이트 실패", e)
-                }
-            }
+            // ⭐️ launch 제거 후 Repository suspend 함수 직접 호출
+            repo.markLetterAsReplied(idToMark)
+            Log.d(TAG, "✅ 원본 편지 $idToMark: 답장 완료 상태(isReplied=true)로 업데이트됨.")
         }
 
-        // 2. 답장 전송 후 ViewModel 상태 초기화 (replyToId 포함)
         clearStates()
     }
-
     // 편지 내용 업데이트
     fun updateContent(text: String) {
         letterContent.value = text
     }
 
     // FireStore, RoomDB에 저장 및 알람 예약
-    fun persistLetter(): String {
-        // letter 고유 id 생성
+    suspend fun persistLetter(): String {
+        // letter 고유 id 생성 및 letter 객체 생성 로직은 동일
         val letterId = UUID.randomUUID().toString()
-        // 현재 시각 (편지 생성 시각) 저장
         val now = System.currentTimeMillis()
-
-        // ⭐️ Letter.date는 이미 setSelectedDate에서 정확히 계산된 selectedDateMillis.value를 사용
         val letter = Letter(
             id = letterId,
             content = letterContent.value,
-            nickname = nicknameToUse.value, // ⭐️ 작성자(Sender) 닉네임 사용
+            nickname = nicknameToUse.value,
             replyToId = replyToId.value,
             createdAt = now,
-            date = selectedDateMillis.value, // ⭐️ 정확히 계산된 타임스탬프 사용
+            date = selectedDateMillis.value,
             userId = userId ?: ""
         )
 
-        viewModelScope.launch {
-            val uid = userId
-            if (uid != null) {
-                // repo.saveAndScheduleLetter 함수로 통일하여 DB, Firestore 저장 및 알람 예약을 한번에 처리
-                // 🚨 이 함수가 존재하지 않다면, repo.insertLetter(letter)와 repo.saveLetterToFirestore(letter, uid)를 호출하고, 알람 예약 로직을 직접 호출해야 합니다.
-                repo.saveAndScheduleLetter(letter, uid)
-            } else {
-                Log.e(TAG, "User ID가 null이라 Firestore 저장 및 알람 예약을 건너뜁니다. 로컬 DB에만 저장됩니다.")
-                repo.insertLetter(letter) // 로컬 DB에만 저장 (알람은 예약되지 않음)
-            }
+        val uid = userId
+        if (uid != null) {
+            repo.saveAndScheduleLetter(letter, uid)
+        } else {
+            repo.insertLetter(letter)
         }
-        // 이전에 작성한 편지 내용이 남아있지 않도록 ViewModel의 상태를 초기화한다
-        clearStates()
-        // 새로 생성한 편지의 id 반환
+
+
         return letterId
     }
 
-    // viewModel 초기화 함수
     private fun clearStates() {
         letterContent.value = ""
         replyToId.value = null

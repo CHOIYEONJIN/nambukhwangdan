@@ -124,4 +124,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.firebase.functions)
+
+    implementation("com.airbnb.android:lottie-compose:6.7.1")
 }

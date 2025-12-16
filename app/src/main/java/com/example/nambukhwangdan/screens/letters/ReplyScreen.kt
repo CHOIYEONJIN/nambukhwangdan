@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +31,7 @@ import com.example.nambukhwangdan.screens.diary.formatDate
 import com.example.nambukhwangdan.ui.theme.Background
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat // ⭐️ SimpleDateFormat import 추가
 import java.util.Date
 import java.util.Locale
@@ -43,7 +45,7 @@ fun ReplyScreen(
     LaunchedEffect(Unit) {
         viewModel.syncLettersFromFirestore()
     }
-
+    val scope = rememberCoroutineScope()
     val allLetters = viewModel.allLetters.collectAsState().value
     val content by viewModel.letterContent.collectAsState()
     val replyToId by viewModel.replyToId.collectAsState()
@@ -92,9 +94,10 @@ fun ReplyScreen(
         // 🔹 전송 버튼
         Button(
             onClick = {
-                // LetterViewModel을 사용하여 답장 저장
-                viewModel.persistLetter()
-                // 저장 후 이전 화면으로 돌아갑니다.
+                scope.launch {
+                    viewModel.persistLetter()
+                    viewModel.handleReplySentSuccessfully()
+                }
                 navController.popBackStack()
             },
             modifier = Modifier

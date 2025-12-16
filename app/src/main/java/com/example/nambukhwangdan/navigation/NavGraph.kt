@@ -50,15 +50,6 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // ❌ [삭제] OnboardingScreen은 AppNavHost에서 관리하므로 중첩 그래프에서 제거합니다.
-        // composable(route="OnboardingScreen"){ ... }
-
-        // ❌ [삭제] OnboardingNicknameScreen은 AppNavHost에서 관리하므로 중첩 그래프에서 제거합니다.
-        // composable(route="OnboardingNicknameScreen"){ ... }
-
-        // ❌ [삭제] LoginScreen은 AppNavHost에서 관리하므로 중첩 그래프에서 제거합니다.
-        // composable(route="LoginScreen"){ ... }
-
         composable("NewLetterScreen"){
             NewLetterScreen(
                 viewModel = letterViewModel,

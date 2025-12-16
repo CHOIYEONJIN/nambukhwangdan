@@ -3,6 +3,7 @@ package com.example.nambukhwangdan.ui.home
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,15 +39,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.nambukhwangdan.data.detailStickerMap
 import com.example.nambukhwangdan.model.Letter.Letter
 import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.screens.diary.formatDate
+import com.example.nambukhwangdan.screens.inbox.LetterItem
 import com.example.nambukhwangdan.screens.journal.DiaryItem
 import com.example.nambukhwangdan.screens.journal.pretendard
 import com.example.nambukhwangdan.ui.theme.Background
@@ -57,6 +62,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+private fun resolveDaySticker(diaries: List<Diary>): String? {
+    if (diaries.isEmpty()) return null
+    val sortedDiaries = diaries.sortedByDescending { it.createdAt }
+    return sortedDiaries.firstOrNull()?.sticker
+}
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun EmotionCalendarScreen(
@@ -85,13 +95,14 @@ fun EmotionCalendarScreen(
     val allLetters by letterViewModel.allLetters.collectAsState()
 
     // 🔹 일별 감정 상태 계산
-    val daySentiments = remember(monthDiaries) {
+    val dayStickerKeys = remember(monthDiaries) {
         monthDiaries.groupBy { diary ->
-            Instant.ofEpochMilli(diary.createdAt) // diary.createdAt 사용 (JournalScreen과 통일)
+            Instant.ofEpochMilli(diary.createdAt)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
-        }.mapValues { entry -> resolveDaySentiment(entry.value) }
+        }.mapValues { entry -> resolveDaySticker(entry.value) } // ⭐️ resolveDaySticker 사용
     }
+
 
     // 🔹 선택한 날짜에 해당하는 일기들만 필터링
     val selectedDiaries = monthDiaries.filter { diary ->
@@ -203,6 +214,9 @@ fun EmotionCalendarScreen(
                             val date = calendarDates[index]
                             val isThisMonth = date.monthValue == currentDate.monthValue
                             val isSelected = date == selectedDate
+                            val stickerKey = dayStickerKeys[date]
+                            val stickerResId = stickerKey?.let { detailStickerMap[it] }
+                            val hasSticker = stickerResId != null
 
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 // 동그란 날짜 셀
@@ -210,11 +224,18 @@ fun EmotionCalendarScreen(
                                     modifier = Modifier
                                         .size(42.dp)
                                         .padding(4.dp)
-                                        .shadow(2.dp, CircleShape)
                                         .clip(CircleShape)
+                                        .run {
+                                            if (!hasSticker) {
+                                                this.shadow(2.dp, CircleShape)
+                                            } else {
+                                                this // 그림자 없이 Modifier 반환
+                                            }
+                                        }
                                         .background(
                                             when {
-                                                isSelected -> Color(0xFFE3F2FD) // 선택된 날짜 배경
+                                                hasSticker -> Color.Transparent // 스티커가 있으면 투명
+                                                isSelected -> Color(0xFFDBE4ED) // 선택된 날짜 배경
                                                 isThisMonth -> Color.White      // 현재 달
                                                 else -> Surface                 // 이전/다음 달
                                             }
@@ -228,14 +249,13 @@ fun EmotionCalendarScreen(
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // 감정 점 표시 (작은 동그라미)
-                                    daySentiments[date]?.let { sentiment ->
-                                        Box(
+                                    if (hasSticker) {
+                                        Image(
+                                            painter = painterResource(id = stickerResId),
+                                            contentDescription = "Diary Sticker: $stickerKey",
+                                            contentScale = ContentScale.Crop,
                                             modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(6.dp)
-                                                .size(8.dp)
-                                                .background(sentimentColor(sentiment), CircleShape)
+                                                .matchParentSize()
                                         )
                                     }
                                 }
@@ -299,9 +319,10 @@ fun EmotionCalendarScreen(
 
                             LetterItem(
                                 letter = letter,
+                                pretendard = pretendard, // ⭐️ pretendard 추가
                                 isExpanded = expanded,
-                                onToggle = { expanded = !expanded },
-                                onLiked = { id -> letterViewModel.toggleLike(id) },
+                                onToggleFavorite = { id -> letterViewModel.toggleLike(id) }, // ⭐️ onToggleFavorite으로 변경
+                                onToggleExpand = { expanded = !expanded }, // ⭐️ onToggleExpand으로 변경
                                 onDelete = { id -> letterViewModel.deleteLetter(id) }
                             )
                         }
@@ -311,52 +332,7 @@ fun EmotionCalendarScreen(
         }
     }
 }
-@Composable
-fun LetterItem(
-    letter: Letter,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
-    onLiked: (String) -> Unit,
-    onDelete: (String) -> Unit
-) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(10.dp))
-            .background(Color(0xFFFFEDED), RoundedCornerShape(10.dp)) // 💗 Letter 색
-            .clickable { onToggle() }
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-    ) {
-        Text(
-            text = "${formatDate(letter.createdAt)} • ${letter.nickname}",
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        Text(
-            text = letter.content,
-            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        // 확장 시에만 북마크 및 삭제 버튼 표시
-        if (isExpanded) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { onLiked(letter.id) }) {
-                    Text(if (letter.liked) "★ 북마크 해제" else "☆ 북마크")
-                }
-                TextButton(onClick = { onDelete(letter.id) }) {
-                    Text("삭제")
-                }
-            }
-        }
-    }
-}
 @RequiresApi(Build.VERSION_CODES.O)
 fun getCalendarDates(year: Int, month: Int): List<LocalDate> {
     val firstDayOfMonth = LocalDate.of(year, month, 1)

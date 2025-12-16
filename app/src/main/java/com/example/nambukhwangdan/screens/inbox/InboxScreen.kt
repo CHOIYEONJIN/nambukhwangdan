@@ -22,9 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -35,6 +38,7 @@ import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
 import com.example.nambukhwangdan.model.Letter.Letter // ⭐️ 공식 Letter 모델 임포트
+import com.google.common.io.Files.append
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -44,9 +48,9 @@ import java.util.Locale
 val pretendard = FontFamily.Default
 
 enum class LetterSortOption(val label: String) {
-    TIME_DESC("시간순 (최신순)"),
-    TIME_ASC("시간순 (오래된순)"),
-    FAVORITE_FIRST("좋아요 먼저"),
+    TIME_DESC("최신순"),
+    TIME_ASC("오래된순"),
+    FAVORITE_FIRST("좋아요순"),
 }
 
 
@@ -160,7 +164,7 @@ fun InboxScreen(
 private fun LetterList(letters: List<Letter>, viewModel: LetterViewModel) {
     LazyColumn(
         modifier = Modifier
-            .width(350.dp)
+            .fillMaxWidth()
             .fillMaxHeight(),
         contentPadding = PaddingValues(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -192,143 +196,172 @@ fun LetterItem(
     val isFavorite = letter.liked
     val collapsedHeight = 70.dp
 
-    val displayDate = letter.createdAt.dateLabelForInbox() // createdAt 사용
-    val favoriteStatus = if (isFavorite) "좋아요 됨" else "좋아요 안 됨"
-    val titleText = letter.content.split("\n").firstOrNull().orEmpty()
+    // DiaryItem과 유사한 날짜 형식 사용
+    val displayDateFormatted = letter.createdAt.dateLabelForInbox() // 예: "월요일"
+    val displayDateVerbose = Instant.ofEpochMilli(letter.createdAt)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)) // 예: "12월 17일"
+
     val indicatorColor = if (isFavorite) Primary else Grey.copy(alpha = 0.5f)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = if (isExpanded) 0.dp else collapsedHeight)
+            .padding(4.dp)
             .animateContentSize(animationSpec = tween(300))
             .clickable { onToggleExpand() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+
+        shape = RoundedCornerShape(10.dp), // DiaryItem과 동일
+        colors = CardDefaults.cardColors(containerColor = Surface), // DiaryItem과 동일
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // DiaryItem과 동일
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.Start
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = collapsedHeight),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
 
-                Column(
-                    modifier = Modifier
-                        .width(70.dp)
-                        .fillMaxHeight()
-                        .padding(horizontal = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = favoriteStatus,
-                        tint = indicatorColor,
-                        modifier = Modifier.size(30.dp)
-                    )
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    // 발송일자
-                    Box(
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(Color.White)
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = displayDate,
-                            fontSize = 8.sp,
-                            fontFamily = pretendard,
-                            color = Color.Black
-                        )
-                    }
-                }
-
-                // 구분선
-                Spacer(modifier = Modifier
-                    .width(1.dp)
-                    .height(50.dp)
-                    .background(Grey))
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(collapsedHeight)
-                        .padding(start = 10.dp, end = 10.dp, top = 10.dp),
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Top
-                ) {
-                    Text(
-                        text = titleText, // 편지 제목 또는 첫 줄
-                        fontFamily = pretendard,
-                        fontSize = 16.sp,
-                        color = Color.Black,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontWeight = if (isFavorite) FontWeight.Bold else FontWeight.Normal
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "보낸 사람: ${letter.nickname}\n${letter.content}", // 발신자 닉네임과 내용 표시
-                        fontFamily = pretendard,
-                        fontSize = 14.sp,
-                        color = Color.Gray,
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-                        overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis
-                    )
-                }
-
-                // 우측 좋아요 토글 아이콘
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Toggle Favorite",
-                    tint = if (isFavorite) Primary else Grey,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { onToggleFavorite(letter.id)}
-                )
-
-                Spacer(modifier = Modifier.width(20.dp))
-            }
-
-            // 확장된 상세 내용 영역
-            if (isExpanded) {
-                Box(
+            // =========================================================
+            // A. 축소 상태 (isExpanded = false)
+            // =========================================================
+            if (!isExpanded) {
+                Row(
+                    // 좌측 70dp 영역 제거 -> 내용 영역이 전체 폭을 차지하도록 패딩 조정
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp)
-                        .background(Surface.copy(alpha = 0.5f))
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                        .height(collapsedHeight)
+                        .padding(start = 16.dp, end = 16.dp), // 좌우 패딩만 적용
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(){
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "delete letter",
-                            modifier = Modifier.clickable { onDelete(letter.id) },
-                            tint = Color(0xFFB00020)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f) // 남은 공간 모두 차지
+                            .fillMaxHeight(),
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.Center // 중앙 정렬
+                    ) {
+                        // 1. 편지 요약 제목: (날짜)에 (보낸사람) 보낸 편지 (AnnotatedString 사용)
                         Text(
-                            "⭐️ 삭제 버튼 클릭 시 이 편지는 영구 삭제됩니다.",
+                            text = buildAnnotatedString {
+                                withStyle(style = SpanStyle(
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                ) {
+                                    append(displayDateFormatted)
+                                }
+                                append("에 ")
+
+                                // (보낸사람) 부분
+                                withStyle(style = SpanStyle(
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                ) {
+                                    append(letter.nickname)
+                                }
+                                // 나머지 부분
+                                append("님이 보낸 편지")
+                            },
                             fontFamily = pretendard,
-                            fontSize = 14.sp
+                            fontSize = 16.sp,
+                            color = Color.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // 2. 내용 미리보기
+                        Text(
+                            text = letter.content,
+                            fontFamily = pretendard,
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            maxLines = 1, // 1줄로 제한
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    // ⭐️ 우측 좋아요 토글 아이콘 (DiaryItem과 동일 위치)
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "Toggle Favorite",
+                        tint = if (isFavorite) Primary else Grey,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onToggleFavorite(letter.id)}
+                    )
+                }
+            }
+
+
+            // =========================================================
+            // B. 확장 상태 (isExpanded = true) - DiaryItem 디자인 복제
+            // =========================================================
+            if (isExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp) // DiaryItem과 동일한 패딩
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // 1. 제목: 받은 편지 제목 ('M월 d일' 형식 사용)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${displayDateVerbose}에 ${letter.nickname}님에게서 온 편지",
+                                fontFamily = pretendard,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold // DiaryItem과 동일
+                            )
+                            // ⭐️ Sticker 영역 제거 (LetterItem에는 스티커 없음)
+                        }
+
+                        // 2. 액션 버튼: 삭제 버튼만 표시 (DiaryItem의 Edit 자리에 삭제 버튼 배치)
+                        Row {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Letter",
+                                // ⭐️ DiaryItem과 동일한 색상/사이즈
+                                tint = Grey,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { onDelete(letter.id) } // ⭐️ 기능 유지
+                            )
+                        }
+                    }
+
+                    // 3. 첫 번째 Divider (DiaryItem과 동일한 간격/스타일)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Divider(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp),
+                        color = Color.LightGray,
+                        thickness = 1.dp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 4. 본문 내용 (LetterItem에는 원본 편지 내용이 없으므로, 편지 내용이 바로 옵니다)
+                    Text(
+                        // ⭐️ 편지 전체 내용을 표시
+                        text = letter.content,
+                        fontFamily = pretendard,
+                        fontSize = 14.sp,
+                        color = Color.DarkGray, // DiaryItem과 동일
+                        lineHeight = 22.sp // DiaryItem과 동일
+                    )
+
+                    // 5. 하단 Spacer (DiaryItem과 동일)
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
 }
-
 // -----------------------------------------------------------------------
 // 기존 MonthSelector, SortOptionPill, LetterSortSelectionDialog, dateLabelForInbox, EmptyInboxState는 유지
 // -----------------------------------------------------------------------
@@ -394,7 +427,7 @@ fun SortOptionPill(
             text = sortOption,
             fontFamily = pretendard,
             fontSize = 12.sp,
-            color = Color.Black
+            color = Grey
         )
         Spacer(modifier = Modifier.width(2.dp))
 
@@ -402,7 +435,7 @@ fun SortOptionPill(
             imageVector = Icons.Filled.KeyboardArrowDown,
             contentDescription = "Change Sort Order",
             modifier = Modifier.size(16.dp),
-            tint = Color.Black
+            tint = Grey
         )
     }
 }

@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,7 @@ import com.example.nambukhwangdan.ui.theme.Surface
 import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
 import com.example.nambukhwangdan.viewmodel.LetterViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -70,6 +72,7 @@ fun NewLetterScreen(
     viewModel: LetterViewModel= hiltViewModel(),
     bottomNavController: NavController
 ) {
+    val scope = rememberCoroutineScope()
     val authViewModel: AuthViewModel = viewModel()
     val nickname = authViewModel.authState.collectAsState().value.currentNickname
     LaunchedEffect(Unit) {
@@ -299,7 +302,9 @@ fun NewLetterScreen(
                 if (receiverName == "익명의 누군가") {
                     viewModel.sendRandomLetter(letterText)
                 } else {
-                    viewModel.persistLetter()
+                    scope.launch {
+                        viewModel.persistLetter()
+                    }
                 }
                 bottomNavController.navigate(Routes.Home) {
                     popUpTo(Routes.NewLetter) { inclusive = true }  // ← 이전 화면 제거

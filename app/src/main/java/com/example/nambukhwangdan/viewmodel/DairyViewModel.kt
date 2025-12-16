@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -90,6 +91,16 @@ class DiaryViewModel @Inject constructor(
             emptyList<TomorrowLetter>()
         )
 
+    val hasFutureTomorrowLetter: StateFlow<Boolean> = allUnDeliveredLetters
+        .map { letters ->
+            val now = System.currentTimeMillis()
+            // ⭐️ DB에서 아직 도착 시간이 되지 않은 TM Letter가 1개라도 있는지 확인합니다.
+            letters.any { it.deliveryTimestamp > now }
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            false
+        )
     val tomorrowLetterContent = MutableStateFlow("")
     val deliveryDateMillis = MutableStateFlow(System.currentTimeMillis())
     val allTomorrowLetters = tomorrowLetterRepo.getAllTomorrowLetters()
@@ -97,6 +108,14 @@ class DiaryViewModel @Inject constructor(
     fun updateTomorrowLetterContent(text: String) { tomorrowLetterContent.value = text }
 
     fun setDeliveryDate(millis: Long) { deliveryDateMillis.value = millis }
+
+    private val _replyTargetTmLetter = MutableStateFlow<TomorrowLetter?>(null)
+    val replyTargetTmLetter: StateFlow<TomorrowLetter?> = _replyTargetTmLetter.asStateFlow()
+
+    fun clearReplyTarget() {
+        _replyTargetTmLetter.value = null
+        replyToId.value = null
+    }
 
     // 새로운 미래 편지를 저장하는 함수
     fun saveTomorrowLetter() {
@@ -188,6 +207,22 @@ class DiaryViewModel @Inject constructor(
     val replyingToTomorrowLetterId = _replyingToTomorrowLetterId.asStateFlow()
     fun setReplyingToTomorrowLetterId(id: String?) {
         _replyingToTomorrowLetterId.value = id
+        Log.d(TAG, "setReplyingToTomorrowLetterId called with ID: $id") // ⭐️ 로그 추가
+
+        viewModelScope.launch {
+            if (!id.isNullOrEmpty()) {
+                try {
+                    val targetLetter = tomorrowLetterRepo.getTomorrowLetterById(id)
+                    _replyTargetTmLetter.value = targetLetter
+                    Log.d(TAG, "Found target letter for UI: ${targetLetter?.id}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to fetch reply target TomorrowLetter: $id", e)
+                    _replyTargetTmLetter.value = null
+                }
+            } else {
+                _replyTargetTmLetter.value = null
+            }
+        }
     }
     private val _isAnonymous = MutableStateFlow(false)
     val isAnonymous = _isAnonymous.asStateFlow()
@@ -196,13 +231,29 @@ class DiaryViewModel @Inject constructor(
     val nicknameToUse = _nicknameToUse.asStateFlow()
 
     // ========== 일기 작성 관련 함수 (기존 코드 유지) ==========
+    private val _currentDiaryId = MutableStateFlow<String?>(null)
+    val currentDiaryId: StateFlow<String?> = _currentDiaryId.asStateFlow()
 
     fun updateDiary(text: String) { todayDiary.value = text }
     fun setSelectedDate(millis: Long) { selectedDateMillis.value = millis }
     fun chooseEmotion(value: String) { selectedEmotion.value = value }
     fun chooseSticker(value: String) { selectedSticker.value = value }
     fun setReplyToId(id: String) {
+        Log.d(TAG, "setReplyToId called with ID: $id") // ⭐️ 로그 추가
+
+        // 1. 기존 replyToId 상태 업데이트 (유지)
         replyToId.value = id
+
+        viewModelScope.launch {
+            try {
+                val targetLetter = tomorrowLetterRepo.getTomorrowLetterById(id)
+                _replyTargetTmLetter.value = targetLetter
+                Log.d(TAG, "Found target letter: ${targetLetter?.id}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch reply target TomorrowLetter: $id", e)
+                _replyTargetTmLetter.value = null
+            }
+        }
     }
     fun onAnonymousCheckedChange(newValue: Boolean) {
         _isAnonymous.value = newValue
@@ -218,6 +269,7 @@ class DiaryViewModel @Inject constructor(
         replyToId.value = null
         _replyingToTomorrowLetterId.value = null
         selectedDateMillis.value = System.currentTimeMillis()
+        _currentDiaryId.value = null
     }
 
     private fun buildDiary(
@@ -269,8 +321,12 @@ class DiaryViewModel @Inject constructor(
 
     fun persistDiaryAndAnalyze(bottomNavController: NavController) {
         val now = System.currentTimeMillis()
+        val newDiaryId = UUID.randomUUID().toString() // ID를 미리 생성
+
+        _currentDiaryId.value = newDiaryId
+
         val diary = Diary(
-            id = UUID.randomUUID().toString(),
+            id = newDiaryId, // 생성된 ID 사용
             content = todayDiary.value,
             emotion = selectedEmotion.value ?: "",
             sticker = selectedSticker.value,
@@ -312,6 +368,40 @@ class DiaryViewModel @Inject constructor(
                 _detectedSentiment.value = "분석 실패"
             }
             bottomNavController.navigate(Routes.AnalyzeResult)
+        }
+    }
+
+    fun updateDiaryWithAnalysisResult() {
+        viewModelScope.launch {
+            val diaryId = _currentDiaryId.value // 저장된 ID를 가져옴
+            val sticker = selectedSticker.value // 선택된 스티커 키(p1, a3 등)를 가져옴
+            val emotion = selectedEmotion.value // 최종 선택된 감정 분류 (긍정/부정/중립)
+
+            if (diaryId != null && (sticker != null || emotion != null)) {
+                // 1. 로컬 DB에서 일기를 불러옵니다.
+                // 이 함수는 Repository에 정의되어 있어야 합니다.
+                val currentDiary = diaryRepo.getDiaryByIdOnce(diaryId)
+
+                if (currentDiary != null) {
+                    // 2. 스티커와 최종 감정을 업데이트합니다.
+                    val updatedDiary = currentDiary.copy(
+                        emotion = emotion ?: currentDiary.emotion, // 최종 감정 분류 업데이트
+                        sticker = sticker, // ⭐️ 최종 스티커 키 업데이트
+                        updatedAt = System.currentTimeMillis()
+                    )
+
+                    // 3. 로컬 DB와 Firebase에 업데이트 요청
+                    diaryRepo.updateDiary(updatedDiary)
+                    diaryRepo.saveDiaryToFirestore(updatedDiary, userId) // ⭐️ Firebase 업데이트!
+
+                    Log.d(TAG, "Diary ID $diaryId updated with Sticker: $sticker, Emotion: $emotion")
+
+                } else {
+                    Log.e(TAG, "Failed to find Diary ID $diaryId for update.")
+                }
+            } else {
+                Log.w(TAG, "Update skipped: Diary ID is missing or nothing was selected.")
+            }
         }
     }
 

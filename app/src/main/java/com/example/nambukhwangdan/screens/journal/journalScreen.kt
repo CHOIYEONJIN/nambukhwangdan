@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,10 +32,15 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.SentimentDissatisfied
+import androidx.compose.material.icons.filled.SentimentSatisfied
+import androidx.compose.material.icons.filled.SentimentVerySatisfied
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -51,6 +57,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.nambukhwangdan.components.MonthOnlyDatePickerDialog
+import com.example.nambukhwangdan.data.detailStickerMap
 import com.example.nambukhwangdan.model.Diary.Diary
 import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetter
 import com.example.nambukhwangdan.ui.theme.Background
@@ -70,8 +81,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetterEntity
-
 // 폰트 임시 지정 (실제 폰트 경로에 맞게 수정 필요)
 val pretendard = FontFamily.Default
 
@@ -238,7 +247,7 @@ fun SortOptionPill(
 ) {
     Row(
         modifier = Modifier
-            .size(width = 70.dp, height = 25.dp)
+            .size(width = 90.dp, height = 25.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Surface)
             .clickable(onClick = onClick),
@@ -249,7 +258,7 @@ fun SortOptionPill(
             text = sortOption,
             fontFamily = pretendard,
             fontSize = 12.sp,
-            color = Color.Black
+            color = Grey
         )
         Spacer(modifier = Modifier.width(2.dp))
 
@@ -257,14 +266,14 @@ fun SortOptionPill(
             imageVector = Icons.Filled.KeyboardArrowDown,
             contentDescription = "Change Sort Order",
             modifier = Modifier.size(16.dp),
-            tint = Color.Black
+            tint = Grey
         )
     }
 }
 
 enum class SortOption(val label: String) {
-    TIME_DESC("시간순 (최신순)"),
-    TIME_ASC("시간순 (오래된순)"),
+    TIME_DESC("최신순"),
+    TIME_ASC("오래된순"),
     LIKED_DESC("좋아요순")
 }
 
@@ -324,7 +333,7 @@ private fun DiaryList(
 ){
     LazyColumn(
         modifier = Modifier
-            .width(350.dp)
+            .fillMaxWidth()
             .fillMaxHeight(),
         contentPadding = PaddingValues(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -367,6 +376,19 @@ fun DiaryItem(
     onEdit: () -> Unit,
     onDelete: (String) -> Unit
 ) {
+    fun getSentimentUi(label: String?): Pair<Color, ImageVector> {
+        return when (label?.lowercase()) {
+            "긍정" -> Pair(Color(0xFFF8D671), Icons.Default.SentimentVerySatisfied) // 긍정 (초록색)
+            "중립" -> Pair(Color(0xFFD9C4A9), Icons.Default.SentimentSatisfied)     // 중립 (노란색)
+            "부정" -> Pair(Color(0xFF6194D7), Icons.Default.SentimentDissatisfied)  // 부정 (빨간색)
+            else -> Pair(Grey.copy(alpha = 0.5f), Icons.Default.SentimentSatisfied) // 기본/분석 없음 (회색)
+        }
+    }
+    val (sentimentColor, sentimentIcon) = getSentimentUi(diary.sentimentLabel)
+
+    val stickerKey = diary.sticker.orEmpty()
+    val stickerResId = detailStickerMap[stickerKey]
+
     val isLiked = diary.liked
     val collapsedHeight = 70.dp
 
@@ -376,17 +398,17 @@ fun DiaryItem(
         .format(DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN))
 
     val displayDayAndDayOfWeek = diary.createdAt.dayLabelForInbox()
-    val emotionText = diary.sticker.orEmpty().ifBlank { "💭" }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(4.dp)
             .animateContentSize(animationSpec = tween(300))
             .clickable { onToggle() },
 
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -414,12 +436,18 @@ fun DiaryItem(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Primary),
+                                .background(sentimentColor), // ⭐️ 감정 색상 적용
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(emotionText, fontSize = 16.sp, color = Color.White)
+                            // ⭐️ 스티커 텍스트 대신 감정 아이콘 표시
+                            Icon(
+                                imageVector = sentimentIcon, // ⭐️ 감정 아이콘 적용
+                                contentDescription = "Sentiment Icon",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-                        Spacer(modifier = Modifier.height(5.dp))
+                        Spacer(modifier = Modifier.height(5.dp)) // ⭐️ Spacer 높이 조정 (위로 올리기 위함)
 
                         Box(
                             modifier = Modifier
@@ -432,7 +460,8 @@ fun DiaryItem(
                                 text = displayDayAndDayOfWeek,
                                 fontSize = 8.sp,
                                 fontFamily = pretendard,
-                                color = Color.Black
+                                color = Color.Black,
+                                modifier = Modifier.offset(y = (-5).dp)
                             )
                         }
                     }
@@ -490,9 +519,25 @@ fun DiaryItem(
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            diary.sentimentLabel?.let { label ->
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            if (stickerResId != null) {
                                 Spacer(modifier = Modifier.width(8.dp))
-                                SentimentBadge(label)
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Transparent),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        // ⭐️ 맵에서 찾은 리소스 ID 사용
+                                        painter = painterResource(id = stickerResId),
+                                        contentDescription = "Diary Sticker: $stickerKey",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.matchParentSize()
+                                    )
+                                }
                             }
                         }
 
@@ -509,7 +554,7 @@ fun DiaryItem(
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete Diary",
-                                tint = Color(0xFFB00020),
+                                tint = Grey,
                                 modifier = Modifier
                                     .size(20.dp)
                                     .clickable { onDelete(diary.id) }
@@ -517,11 +562,17 @@ fun DiaryItem(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Divider(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp),
+                        color = Color.LightGray,
+                        thickness = 1.dp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // ⭐️ 원본 편지 내용 표시
                     Text(
-                        text = "원본 편지: ${originalLetterContent}",
+                        text = "어제의 내가 남긴 편지: ${originalLetterContent}",
                         fontFamily = pretendard,
                         fontSize = 13.sp,
                         color = Color.Gray,
@@ -529,27 +580,33 @@ fun DiaryItem(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        repeat(3) {
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Grey.copy(alpha = 0.2f))
-                                    .weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Photo $it", color = Grey)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
+//                    Spacer(modifier = Modifier.height(8.dp))
+//
+//                    Row(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+//                    ) {
+//                        repeat(3) {
+//                            Box(
+//                                modifier = Modifier
+//                                    .size(80.dp)
+//                                    .clip(RoundedCornerShape(8.dp))
+//                                    .background(Grey.copy(alpha = 0.2f))
+//                                    .weight(1f),
+//                                contentAlignment = Alignment.Center
+//                            ) {
+//                                Text("Photo $it", color = Grey)
+//                            }
+//                        }
+//                    }
+//
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Divider(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp),
+                        color = Color.LightGray,
+                        thickness = 1.dp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
                         text = diary.content,

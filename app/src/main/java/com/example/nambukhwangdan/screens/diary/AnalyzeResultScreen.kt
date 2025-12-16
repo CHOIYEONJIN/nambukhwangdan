@@ -64,6 +64,7 @@ import com.example.nambukhwangdan.viewmodel.DiaryViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.nambukhwangdan.data.detailStickerMap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,25 +74,17 @@ fun AnalyzeResultScreen(
 
 ) {
     val emotionColors = mapOf(
-        "긍정" to Color(0xFF8BC34A),   // 초록 (긍정)
-        "중립" to Color(0xFFFFC107),   // 노랑 (중립)
-        "부정" to Color(0xFFF44336)    // 빨강 (부정)
+        "긍정" to Color(0xFFF8D671),   // 초록 (긍정)
+        "중립" to Color(0xFFD9C4A9),   // 노랑 (중립)
+        "부정" to Color(0xFF6194D7)    // 빨강 (부정)
     )
 
     // Firestore에서 감정 결과 수신
     val detectedSentiment by viewModel.detectedSentiment.collectAsState()
 
-    // ⭐️ 오류 수정: pastDiaries 대신 ViewModel에 정의된 allDiaries를 사용합니다.
-    // 이는 모든 일기 기록 목록이며, StateFlow이므로 초기값 없이 collectAsState()를 사용할 수 있습니다.
-    val pastLetters by viewModel.allDiaries.collectAsState()
-
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
-
-    val replyToId by viewModel.replyToId.collectAsState()
-    // replyLetter는 현재 로컬에서는 찾을 필요가 없으므로 주석 처리하거나, 필요하다면 Diary 모델을 import 해야 합니다.
-    // val replyLetter = pastLetters.find { it.id == replyToId }
 
     // ✅ Compose 내장 DatePicker 상태
     val datePickerState = rememberDatePickerState(
@@ -109,7 +102,6 @@ fun AnalyzeResultScreen(
     val dateStr = remember(dateMillis) {
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
-    // 이전에 중복으로 collectAsState를 사용하던 부분을 제거하고 'detectedSentiment' 변수를 사용
     val selectedEmotion by viewModel.selectedEmotion.collectAsState()
     val selectedSticker by viewModel.selectedSticker.collectAsState()
     val emotionCats = listOf("긍정", "중립", "부정")
@@ -119,10 +111,10 @@ fun AnalyzeResultScreen(
 
     val detailStickers = remember(safeEmotion) {
         when (safeEmotion) {
-            "긍정" -> listOf("기쁨", "감사", "뿌듯", "설렘", "안도")
-            "중립" -> listOf("차분", "평온", "무던", "담담", "관망")
-            "부정" -> listOf("분노", "슬픔", "피곤", "불안", "죄책")
-            else -> listOf("기쁨", "감사", "분노", "놀람", "슬픔") // 최소 Fallback
+            "긍정" -> listOf("p1", "p2", "p3", "p4", "p5")
+            "중립" -> listOf("a1", "a2", "a3", "a4", "a5")
+            "부정" -> listOf("n1", "n2", "n3", "n4", "n5")
+            else -> listOf("n2", "a2", "p1", "a4", "n3") // 최소 Fallback
         }
     }
 
@@ -196,7 +188,7 @@ fun AnalyzeResultScreen(
                 item {
                     Column(
                         modifier = Modifier
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = 30.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
                             .fillMaxWidth()
                             .background(Surface, RoundedCornerShape(10.dp))
@@ -258,7 +250,7 @@ fun AnalyzeResultScreen(
 
 
 
-                        Text("상세 감정 스티커 선택", fontWeight = FontWeight.Bold)
+                        Text("스티커로 다이어리를 꾸며주세요!", fontWeight = FontWeight.Bold)
 
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(5),     // 한 줄에 5개씩
@@ -268,14 +260,18 @@ fun AnalyzeResultScreen(
                                 .heightIn(min = 80.dp, max = 200.dp),   // 안정적인 높이 확보!
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            items(detailStickers) { sticker ->
-                                val isSelected = selectedSticker == sticker
+                            items(detailStickers) { stickerName ->
+                                val isSelected = selectedSticker == stickerName
+
+                                // ⭐️⭐️ 상세 감정 스티커를 이미지로 표시하도록 수정 ⭐️⭐️
+                                val imageResId = detailStickerMap[stickerName]
 
                                 EmotionCircleButton(
-                                    label = sticker,
+                                    label = stickerName, // Content Description용으로 사용
                                     isSelected = isSelected,
-                                    bgColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
-                                    onClick = { viewModel.chooseSticker(sticker) }
+                                    bgColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, // 이미지 사용 시 투명 또는 원하는 색상
+                                    imageRes = imageResId, // 이미지 리소스 ID 전달
+                                    onClick = { viewModel.chooseSticker(stickerName) }
                                 )
                             }
                         }
@@ -288,6 +284,7 @@ fun AnalyzeResultScreen(
         // 하단 버튼
         Button(
             onClick = {
+                viewModel.updateDiaryWithAnalysisResult()
                 viewModel.resetDetectedSentiment() // 다음 화면으로 넘어가기 전 분석 결과 초기화 (선택적)
                 bottomNavController.navigate(Routes.LetterToTomorrow)
             },
@@ -411,8 +408,11 @@ fun EmotionCircleButton(
             .clip(CircleShape)
             .background(
                 if (imageRes == null) {
+                    // 감정 분류(긍정/중립/부정) 버튼 (이미지 미사용)
                     bgColor.copy(alpha = if (isSelected) 1f else 0.4f)
                 } else {
+                    // 상세 감정 스티커 (이미지 사용) - 배경은 투명하게 하고 선택 시 크기 변화만 줍니다.
+                    // 만약 이미지 뒤에 선택된 배경색을 원하면 여기서 bgColor를 사용하도록 수정 가능합니다.
                     Color.Transparent
                 }
             )
@@ -420,6 +420,7 @@ fun EmotionCircleButton(
         contentAlignment = Alignment.Center
     ) {
         if (imageRes == null) {
+            // 텍스트 버튼 (긍정/중립/부정)
             Text(
                 text = label,
                 fontSize = 11.sp,
@@ -427,10 +428,12 @@ fun EmotionCircleButton(
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
         } else {
+            // 이미지 스티커 버튼
             Image(
                 painter = painterResource(id = imageRes),
                 contentDescription = label,
-                modifier = Modifier.size(42.dp).clip(CircleShape)
+                // 스티커 크기를 조정할 수 있습니다.
+                modifier = Modifier.size(50.dp).clip(CircleShape)
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.example.nambukhwangdan.ui.home
 
+import android.R.attr.fontFamily
+import android.R.attr.fontWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,10 +58,16 @@ import kotlin.random.Random
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import com.google.common.io.Files.append
 
 // ⭐️ 클릭된 아이템의 타입을 구분하기 위한 Wrapper 클래스 (모델 통합)
 sealed class ActionableItem {
@@ -93,16 +101,18 @@ fun HomeScreen(
     bottomNavController: NavController
 ) {
     val pretendard = FontFamily.Default
+    val scope = rememberCoroutineScope()
 
     val lettersToProcess by viewModel.allLetters.collectAsState(initial = emptyList())
     val tomorrowLettersToProcess by diaryViewModel.receivedTomorrowLetters.collectAsState(initial = emptyList())
+    val hasFutureLetter by diaryViewModel.hasFutureTomorrowLetter.collectAsState(initial = false)
 
     val actionableItems = remember(lettersToProcess, tomorrowLettersToProcess) {
         val letterList = lettersToProcess.map { ActionableItem.ActionableLetter(it) }
 
         val tomorrowList = tomorrowLettersToProcess.map { ActionableItem.ActionableTomorrowLetter(it) }
 
-        val dummyList = if (tomorrowList.isEmpty()) {
+        val dummyList = if (tomorrowList.isEmpty() && !hasFutureLetter) {
             val dummyLetter = TomorrowLetter.createDummy(userId = "")
             listOf(ActionableItem.ActionableTomorrowLetter(dummyLetter))
         } else {
@@ -352,77 +362,104 @@ fun HomeScreen(
 // ====================================================================
 @Composable
 fun SelfLetterPopup(
-    letter: TomorrowLetter, // ⭐️ TomorrowLetter 타입 사용
+    letter: TomorrowLetter, // ⭐️ TomorrowLetter 타입 사용 (기능 유지)
     onClose: () -> Unit,
     bottomNavController: NavController,
-    diaryViewModel: DiaryViewModel // ⭐️ DiaryViewModel 사용
+    diaryViewModel: DiaryViewModel // ⭐️ DiaryViewModel 사용 (기능 유지)
 ) {
     val pretendard = FontFamily.Default
+    val backgroundImageResId = R.drawable.popupbg
+    val scaleFactor = 1.4f
 
-    Card(
+    // 제목 로직 (기능 유지)
+    val isDummy = letter.id == TomorrowLetter.FIRST_DIARY_DUMMY_ID
+    val titleTextRaw = if (isDummy) {
+        "첫 일기를 작성해 볼까요?"
+    } else {
+        "${formatDate(letter.deliveryTimestamp)}의 나에게서 온 편지"
+    }
+
+    Box(
         modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .wrapContentHeight(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    )
-    {
+            .fillMaxWidth(1f) // ⭐️ OtherLetterPopup과 동일한 원래 크기(0.85f) 복원
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        // 2. 배경 이미지 (1.4배 확대 적용)
+        Image(
+            painter = painterResource(id = backgroundImageResId),
+            contentDescription = "팝업 배경",
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer(
+                    scaleX = scaleFactor,
+                    scaleY = scaleFactor
+                ),
+            contentScale = ContentScale.Crop
+        )
+
+        // 3. 기존 컨텐츠 (컬럼)
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier
+                .padding(28.dp) // 내부 패딩
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val titleText = if (letter.id == TomorrowLetter.FIRST_DIARY_DUMMY_ID) {
-                "첫 일기를 작성해 볼까요?"
-            } else {
-                "${formatDate(letter.deliveryTimestamp)}의 나에게서 온 편지"
-            }
-            // ⭐️ 제목: TomorrowLetter의 전달 날짜 사용
+
+            // ⭐️ UI 통일: AnnotatedString 사용한 제목 스타일링 ⭐️
             Text(
-                text = titleText,
-                fontFamily = pretendard, fontSize = 20.sp, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp)
+                text = if (isDummy) {
+                    buildAnnotatedString { append(titleTextRaw) }
+                } else {
+                    buildAnnotatedString {
+                        // 날짜 부분에 Primary 색상 적용
+                        withStyle(style = SpanStyle(color = Primary)) {
+                            append(formatDate(letter.deliveryTimestamp))
+                        }
+                        append("의")
+                        append("\n")
+                        append(" 나에게서 온 편지")
+                    }
+                },
+                fontFamily = pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 20.sp,
+                color = Color.Black,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
+            // 내용 (기능/스타일 유지)
             Text(
                 text = letter.content,
                 fontFamily = pretendard,
-                fontSize = 16.sp, color = Color.Gray,
+                fontSize = 16.sp,
+                color = Color.Gray,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
+
+            // 4. 오늘의 일기 쓰기 버튼 (기능 유지, UI 통일)
             Button(
                 onClick = {
-                    bottomNavController.navigate(Routes.DiaryWrite)
+                    bottomNavController.navigate(Routes.DiaryWrite) // ⭐️ 기능 유지
                     onClose()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
+                    // ⭐️ OtherLetterPopup과 동일한 height (40.dp)
+                    .height(40.dp),
+                // ⭐️ UI 통일: Radius 99.dp 적용
+                shape = RoundedCornerShape(99.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
                 Text(
-                    "오늘의 일기 쓰기",
+                    "오늘의 일기 쓰기", // ⭐️ 텍스트 유지
                     fontFamily = pretendard,
                     fontSize = 18.sp,
                     color = Color.White
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(
-                onClick = onClose,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
-            ) {
-                Text(
-                    text = "닫기",
-                    fontFamily = pretendard,
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
+
         }
     }
 }
@@ -430,49 +467,86 @@ fun SelfLetterPopup(
 // ====================================================================
 // 2. 남에게서 온 편지 (다른 사용자에게 답장) 팝업 (Letter 처리 -> 답장 작성)
 // ====================================================================
+
 @Composable
 fun OtherLetterPopup(
-    letter: Letter, // Letter 타입 사용 (기존 유지)
+    letter: Letter,
     onClose: () -> Unit,
     bottomNavController: NavController,
-    viewModel: LetterViewModel // LetterViewModel 사용 (기존 유지)
+    viewModel: LetterViewModel
 ) {
     val pretendard = FontFamily.Default
+    val backgroundImageResId = R.drawable.popupbg
 
-    Card(
+    val scaleFactor = 1.4f
+
+    // 1. Box를 사용하여 배경 이미지 위에 컨텐츠를 쌓고, 원래 팝업 크기를 유지합니다.
+    Box(
         modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .wrapContentHeight(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    )
-    {
+            .fillMaxWidth(1f)
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(16.dp)), // Box 자체에 둥근 모서리를 적용하여 이미지와 내용이 밖으로 나가지 않도록 함
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = backgroundImageResId),
+            contentDescription = "팝업 배경",
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer(
+                    scaleX = scaleFactor,
+                    scaleY = scaleFactor
+                ),
+            contentScale = ContentScale.Crop // 팝업 영역에 맞춰 중앙 부분을 잘라 표시 (Crop이 가장 자연스러움)
+        )
+
+        // 3. 기존 컨텐츠 (컬럼)
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier
+                .padding(28.dp) // 내부 패딩
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 제목: 남에게서 온 편지 (닉네임 사용)
             Text(
-                text = "${formatDate(letter.createdAt)}에 ${letter.nickname}님에게서 온 편지",
-                fontFamily = pretendard, fontSize = 20.sp, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp)
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = Primary)) {
+                        append(formatDate(letter.createdAt))
+                    }
+                    append("에")
+                    append("\n")
+                    withStyle(style = SpanStyle(color = Primary)) {
+                        append(letter.nickname)
+                    }
+                    append("님에게서 온 편지")
+                },
+                fontFamily = pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 20.sp,
+                color = Color.Black,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
+            // 내용
             Text(
                 text = letter.content,
                 fontFamily = pretendard,
-                fontSize = 16.sp, color = Color.Gray,
+                fontSize = 16.sp,
+                color = Color.Gray,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
+
+            // 4. 답장하기 버튼 (Radius 99.dp 적용)
             Button(
                 onClick = {
+                    // ViewModel에서 필요한 데이터 설정 (예시)
+                    // viewModel.setReplyToLetter(letter)
                     bottomNavController.navigate(Routes.ReplyScreen)
                     onClose()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .height(40.dp),
+                shape = RoundedCornerShape(99.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
                 Text(
@@ -482,22 +556,8 @@ fun OtherLetterPopup(
                     color = Color.White
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(
-                onClick = onClose,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
-            ) {
-                Text(
-                    text = "닫기",
-                    fontFamily = pretendard,
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
+
+            // 5. 닫기 버튼은 제거됨
         }
     }
 }

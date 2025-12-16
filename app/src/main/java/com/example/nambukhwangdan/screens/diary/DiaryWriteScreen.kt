@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -83,7 +84,6 @@ fun DiaryWriteScreen(
     bottomNavController: NavController
 ) {
     val selectedUris by viewModel.selectedUris.collectAsState()
-    val pastDiaries by viewModel.allDiaries.collectAsState() // allDiaries 사용
     val diary by viewModel.todayDiary.collectAsState()
     val dateMillis by viewModel.selectedDateMillis.collectAsState()
     val todayMillis = System.currentTimeMillis()
@@ -120,16 +120,12 @@ fun DiaryWriteScreen(
         }
     )
 
-    // 📌 원본 로직 유지: 스크린 진입 시 일기 작성 상태 초기화
     LaunchedEffect(Unit) {
         viewModel.updateDiary("")   // 항상 입력 칸은 빈칸
     }
 
-    val replyToId by viewModel.replyToId.collectAsState()
 
-    // pastDiaries 중 replyToId와 동일한 id를 가진 Diary 객체 찾기
-    val replyDiary = pastDiaries.find { it.id == replyToId }
-
+    val replyTarget by viewModel.replyTargetTmLetter.collectAsState()
 
     Box(
         modifier = Modifier
@@ -197,30 +193,22 @@ fun DiaryWriteScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 특정 편지 하나만 보여주기 (답장의 대상이 되는 일기)
-                replyDiary?.let { diaryItem ->
+                replyTarget?.let { tmLetterItem ->
                     item {
                         Column(
                             modifier = Modifier
-                                .padding(horizontal = 20.dp)
+                                .padding(horizontal = 30.dp)
                                 .shadow(4.dp, RoundedCornerShape(10.dp))
                                 .fillMaxWidth()
                                 .background(Surface, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // diaryItem.userId의 앞 4글자로 임시 닉네임 생성 (실제 닉네임 필드가 없으므로)
-                            val displayNickname = if (diaryItem.userId.length >= 4) {
-                                "${diaryItem.userId.substring(0, 4)}..."
-                            } else {
-                                "나"
-                            }
-
                             Text(
-                                // userId를 기반으로 임시 닉네임 표시
-                                "${formatDate(diaryItem.createdAt)}의 ${displayNickname}에게서 온 편지",
+                                "${formatDate(tmLetterItem.createdAt)}의 나에게서 온 편지",
                                 fontWeight = FontWeight.SemiBold
                             )
-                            ExpandableDiaryCard(diaryItem.content)
+                            ExpandableDiaryCard(tmLetterItem.content) // tmLetterItem의 content 사용
                         }
                     }
                 }
@@ -502,14 +490,13 @@ fun DiaryWriteScreen(
 fun ExpandableDiaryCard(content: String) {
     var expanded by remember { mutableStateOf(false) }
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize()
-            .clickable { expanded = !expanded },
-        elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
-
+            .clickable { expanded = !expanded }
+            .background(Color.Transparent)
+            .padding(vertical = 4.dp)
     ) {
         Column(Modifier.padding(12.dp)) {
             Text(
@@ -523,7 +510,11 @@ fun ExpandableDiaryCard(content: String) {
                 text = if (expanded) "접기 ▲" else "더보기 ▼",
                 color = Color.Gray,
                 fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.End)
+                // ⭐️ [강화] fillMaxWidth를 사용하여 부모 폭을 채운 뒤,
+                // wrapContentWidth(Alignment.End)로 내용을 오른쪽 끝에 정렬합니다.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentWidth(Alignment.End)
             )
         }
     }
