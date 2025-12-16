@@ -70,6 +70,26 @@ class LetterViewModel @Inject constructor(
         replyToId.value = id
     }
 
+    fun handleReplySentSuccessfully() {
+        val idToMark = replyToId.value
+
+        // 1. 답장 대상 ID가 존재하는지 확인 (새 편지가 아니라 답장인 경우)
+        if (idToMark != null) {
+            viewModelScope.launch {
+                try {
+                    // ⭐️ Repository를 통해 Room DB의 isReplied 상태를 true로 업데이트
+                    repo.markLetterAsReplied(idToMark)
+                    Log.d(TAG, "✅ 원본 편지 $idToMark: 답장 완료 상태(isReplied=true)로 업데이트됨.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "답장 완료 상태 업데이트 실패", e)
+                }
+            }
+        }
+
+        // 2. 답장 전송 후 ViewModel 상태 초기화 (replyToId 포함)
+        clearStates()
+    }
+
     // 편지 내용 업데이트
     fun updateContent(text: String) {
         letterContent.value = text
@@ -114,13 +134,12 @@ class LetterViewModel @Inject constructor(
     private fun clearStates() {
         letterContent.value = ""
         replyToId.value = null
-        _receiverName.value = "미래의 나" // ⭐️ 수신인 상태 초기화 추가
+        _receiverName.value = "미래의 나"
     }
 
     // 사용자가 달력에서 선택한 날짜의 시간
     val selectedDateMillis = MutableStateFlow(System.currentTimeMillis())
 
-    // ⭐️ [최종 수정 로직] 날짜 선택 시 KST 23:00를 기준으로 타임스탬프 계산
     fun setSelectedDate(dateMillis: Long) {
         val zoneIdKST = ZoneId.of("Asia/Seoul")
 

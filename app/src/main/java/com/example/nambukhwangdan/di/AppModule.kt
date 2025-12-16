@@ -16,8 +16,17 @@ import androidx.core.app.NotificationManagerCompat
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.nambukhwangdan.LetterDeliveryReceiver
 
+val MIGRATION_10_11: Migration = object : Migration(10, 11) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            "ALTER TABLE letters ADD COLUMN isReplied INTEGER NOT NULL DEFAULT 0"
+        )
+    }
+}
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -30,7 +39,7 @@ object AppModule {
             AppDatabase::class.java,
             "diary_database"
         )
-            .fallbackToDestructiveMigration()   // ← 이거 필수!!!
+            .addMigrations(MIGRATION_10_11)
             .build()
     @Singleton
     @Provides

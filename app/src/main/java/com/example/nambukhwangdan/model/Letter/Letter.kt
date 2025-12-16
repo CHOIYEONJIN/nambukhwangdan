@@ -9,4 +9,5 @@ data class Letter(
     val liked: Boolean = false, // 편지 좋아요 기능
     val date: Long = 0L, //사용자가 선택한 편지 도착 날짜
     val userId:String="", //편지를 보낸 사람의 id
+    val isReplied: Boolean = false,
 )

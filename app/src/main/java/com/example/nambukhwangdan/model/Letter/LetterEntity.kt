@@ -12,5 +12,6 @@ data class LetterEntity(
     val replyToId: String?,
     val liked: Boolean = false,
     val date: Long,
-    val userId:String
+    val userId:String,
+    val isReplied: Boolean = false
     )

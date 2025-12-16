@@ -75,6 +75,12 @@ class LetterRepository @Inject constructor(
         deleteLetterFromFirestore(id, userId)
     }
 
+    suspend fun markLetterAsReplied(letterId: String) {
+        // Room DB의 isReplied 플래그를 true로 업데이트 (DAO 함수 호출)
+        letterDao.updateLetterRepliedStatus(letterId, true)
+        Log.d("LetterRepo", "✅ Letter $letterId marked as replied (Local DB).")
+    }
+
     // 편지 쓰기 플로우를 위한 통합 함수
     suspend fun saveAndScheduleLetter(letter: Letter, userId: String) {
         // 1. 로컬 DB에 저장

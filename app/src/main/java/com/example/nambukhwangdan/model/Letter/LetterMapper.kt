@@ -11,7 +11,8 @@ fun Letter.toEntity(): LetterEntity {
         replyToId = this.replyToId,
         liked = this.liked,
         date=this.date,
-        userId=this.userId
+        userId=this.userId,
+        isReplied = this.isReplied
     )
 }
 
@@ -24,7 +25,8 @@ fun LetterEntity.toLetter(): Letter {
         replyToId = this.replyToId,
         liked = this.liked,
         date=this.date,
-        userId = this.userId
+        userId = this.userId,
+        isReplied = this.isReplied
 
     )
 }
