@@ -1,15 +1,16 @@
 package com.example.nambukhwangdan.data.repository
 
-import com.example.nambukhwangdan.data.local.DiaryDao
-import com.example.nambukhwangdan.model.Diary.Diary
-import com.example.nambukhwangdan.model.Diary.DiaryEntity
-import com.example.nambukhwangdan.model.Diary.toDiary
-import com.example.nambukhwangdan.model.Diary.toEntity
 // import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetter // ❌ 제거
 // import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetterEntity // ❌ 제거
+import com.example.nambukhwangdan.data.local.DiaryDao
+import com.example.nambukhwangdan.model.Diary.Diary
+import com.example.nambukhwangdan.model.Diary.toDiary
+import com.example.nambukhwangdan.model.Diary.toEntity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+
 
 /**
  * [수정됨] 일기(Diary) 데이터에 대한 단일 접근 지점.
@@ -244,5 +246,17 @@ class DiaryRepository @Inject constructor(
         )
     } catch (_: Exception) {
         null
+    }
+    private fun ensureUserDocument(uid: String) {
+        val firestore = FirebaseFirestore.getInstance()
+
+        firestore.collection("users")
+            .document(uid)
+            .set(
+                mapOf(
+                    "createdAt" to FieldValue.serverTimestamp()
+                ),
+                SetOptions.merge()
+            )
     }
 }
