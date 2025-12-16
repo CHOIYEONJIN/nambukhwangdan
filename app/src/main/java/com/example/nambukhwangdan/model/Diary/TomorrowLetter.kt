@@ -22,8 +22,11 @@ data class TomorrowLetter(
     @PropertyName("user_id")
     var userId: String = "",
 
-    @PropertyName("is_delivered")
-    var isDelivered: Boolean = false
+    @PropertyName("is_arrived")
+    var isArrived: Boolean = false,
+
+    @PropertyName("is_replied")
+    var isReplied: Boolean = false
 
 ) {
     constructor() : this(
@@ -32,7 +35,8 @@ data class TomorrowLetter(
         deliveryTimestamp = 0L,
         createdAt = System.currentTimeMillis(),
         userId = "",
-        isDelivered = false
+        isArrived = false,
+        isReplied = false
     )
     companion object {
         const val FIRST_DIARY_DUMMY_ID = "DUMMY_FIRST_DIARY"
@@ -48,8 +52,9 @@ data class TomorrowLetter(
                 content = "아직 미래의 나에게서 온 편지가 없어요!\n첫 일기를 작성해 미래의 나에게 메시지를 남겨보세요.",
                 deliveryTimestamp = nowKST, // 현재 시간으로 설정하여 즉시 도착한 것으로 간주
                 createdAt = nowKST,
-                userId = userId, // 실제 로그인된 사용자 ID를 사용
-                isDelivered = true // 이미 도착한 것으로 설정
+                userId = userId,
+                isArrived = true,
+                isReplied = false
             )
         }
     }

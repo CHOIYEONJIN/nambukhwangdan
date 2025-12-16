@@ -134,8 +134,8 @@ class TomorrowLetterRepository @Inject constructor(
     /**
      * 편지가 Diary로 변환되어 전달되었음을 표시하기 위해 상태를 업데이트하고 Firestore에도 반영합니다.
      */
-    suspend fun markLetterAsDelivered(letter: TomorrowLetter) {
-        val updatedLetter = letter.copy(isDelivered = true)
+    suspend fun markTMLetterAsReplied(letter: TomorrowLetter) {
+        val updatedLetter = letter.copy(isReplied = true)
         // Room 업데이트
         diaryDao.updateTomorrowLetterDao(updatedLetter.toTomorrowLetterEntity())
 
@@ -204,7 +204,8 @@ class TomorrowLetterRepository @Inject constructor(
         "delivery_timestamp" to deliveryTimestamp,
         "created_at" to createdAt,
         "user_id" to userId,
-        "is_delivered" to isDelivered
+        "is_Arrived" to isArrived,
+        "is_Replied" to isReplied
     )
 
     /**
@@ -216,7 +217,8 @@ class TomorrowLetterRepository @Inject constructor(
         deliveryTimestamp = deliveryTimestamp,
         createdAt = createdAt,
         userId = userId,
-        isDelivered = isDelivered
+        isReplied = isReplied,
+        isArrived = isArrived
     )
 
     /**
@@ -228,7 +230,8 @@ class TomorrowLetterRepository @Inject constructor(
         deliveryTimestamp = deliveryTimestamp,
         createdAt = createdAt,
         userId = userId,
-        isDelivered = isDelivered
+        isReplied = isReplied,
+        isArrived = isArrived
     )
 
     /**
@@ -247,5 +250,10 @@ class TomorrowLetterRepository @Inject constructor(
         return nextDayNineAM.atZone(zoneId)
             .toInstant()
             .toEpochMilli()
+    }
+
+    suspend fun markLetterAsArrived(letter: TomorrowLetter) {
+        // letter.id를 사용하여 DAO 호출
+        diaryDao.markLetterAsArrived(letter.id)
     }
 }

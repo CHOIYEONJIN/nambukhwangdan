@@ -58,7 +58,7 @@ class LetterDeliveryReceiver : BroadcastReceiver() {
         if (letter != null) {
             // 2. 편지 상태 업데이트 (전달됨으로 표시)
             // (ViewModel이 처리하는 것이 일반적이나, 여기서는 Receiver에서 직접 호출)
-            repository.markLetterAsDelivered(letter)
+            repository.markLetterAsArrived(letter)
 
             // 3. 시스템 알림 생성 및 발송
             showNotification(context, letterId, letter.content)

@@ -91,7 +91,7 @@ interface DiaryDao {
     /**
      * 아직 전달되지 않은 미래 편지 목록을 최신 작성일(createdAt) 기준으로 가져옵니다. (실시간 업데이트용)
      */
-    @Query("SELECT * FROM tomorrow_letters WHERE isDelivered = 0 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM tomorrow_letters WHERE isReplied = 0 ORDER BY createdAt DESC")
     fun getAllUnDeliveredLettersDao(): Flow<List<TomorrowLetterEntity>>
 
     /**
@@ -110,11 +110,14 @@ interface DiaryDao {
      * 전달 시점(deliveryTimestamp)이 현재 시간보다 빠르거나 같고,
      * 아직 전달되지 않은(isDelivered = false) 편지 목록을 한 번만 가져옵니다. (전달 로직 실행용)
      */
-    @Query("SELECT * FROM tomorrow_letters WHERE deliveryTimestamp <= :currentTime AND isDelivered = 0")
+    @Query("SELECT * FROM tomorrow_letters WHERE deliveryTimestamp <= :currentTime AND isArrived = 0")
     suspend fun getDueLettersOnceDao(currentTime: Long): List<TomorrowLetterEntity>
     @Query("SELECT * FROM tomorrow_letters WHERE id = :id LIMIT 1")
     suspend fun getTomorrowLetterByIdDao(id: String): TomorrowLetterEntity?
 
     @Query("SELECT * FROM tomorrow_letters ORDER BY createdAt DESC") // ⭐️ 모든 편지 반환 쿼리 추가
     fun getAllTomorrowLettersDao(): Flow<List<TomorrowLetterEntity>>
+
+    @Query("UPDATE tomorrow_letters SET isArrived = 1 WHERE id = :letterId")
+    suspend fun markLetterAsArrived(letterId: String)
 }

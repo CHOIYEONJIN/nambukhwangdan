@@ -83,19 +83,22 @@ class DiaryViewModel @Inject constructor(
 
     val receivedTomorrowLetters = allUnDeliveredLetters
         .map { letters ->
-            val now = System.currentTimeMillis()
-            letters.filter { it.deliveryTimestamp <= now && !it.isDelivered }
+            // allUnDeliveredLetters (DAO 쿼리: isReplied = 0) 중에서
+            // isArrived가 true인 것만 필터링 (현재 도착한 미답장 편지)
+            letters.filter { it.isArrived }
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList<TomorrowLetter>()
         )
-
     val hasFutureTomorrowLetter: StateFlow<Boolean> = allUnDeliveredLetters
         .map { letters ->
             val now = System.currentTimeMillis()
-            // ⭐️ DB에서 아직 도착 시간이 되지 않은 TM Letter가 1개라도 있는지 확인합니다.
-            letters.any { it.deliveryTimestamp > now }
+
+            // allUnDeliveredLetters (DAO 쿼리: isReplied = 0) 중에서
+            // isArrived가 false이고 (아직 도착 플래그가 설정되지 않았고)
+            // deliveryTimestamp가 현재 시간보다 미래인 편지 확인
+            letters.any { !it.isArrived && it.deliveryTimestamp > now }
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
@@ -136,7 +139,8 @@ class DiaryViewModel @Inject constructor(
             content = tomorrowLetterContent.value,
             deliveryTimestamp = deliveryDateMillis.value,
             createdAt = System.currentTimeMillis(),
-            isDelivered = false,
+            isArrived = false,
+            isReplied = false,
             userId = userId ?: ""
         )
 
@@ -170,7 +174,7 @@ class DiaryViewModel @Inject constructor(
                 )
 
                 saveDiary(deliveredDiary)
-                tomorrowLetterRepo.markLetterAsDelivered(letter)
+                tomorrowLetterRepo.markTMLetterAsReplied(letter)
             }
         }
     }
@@ -293,24 +297,6 @@ class DiaryViewModel @Inject constructor(
         )
     }
 
-    fun persistDiary(
-        content: String = todayDiary.value,
-        dateMillis: Long = selectedDateMillis.value
-    ): Diary {
-        val diary = buildDiary(content, dateMillis)
-        val tomorrowLetterId = _replyingToTomorrowLetterId.value
-        if (tomorrowLetterId != null) {
-            viewModelScope.launch {
-                val letter = tomorrowLetterRepo.getTomorrowLetterById(tomorrowLetterId)
-                if (letter != null) {
-                    tomorrowLetterRepo.markLetterAsDelivered(letter.copy(isDelivered = true))
-                }
-            }
-        }
-        saveDiary(diary)
-        clearForNewEntry()
-        return diary
-    }
 
     fun saveDiary(diary: Diary) {
         viewModelScope.launch {
@@ -342,7 +328,7 @@ class DiaryViewModel @Inject constructor(
             if (tomorrowLetterId != null) {
                 val letter = tomorrowLetterRepo.getTomorrowLetterById(tomorrowLetterId)
                 if (letter != null) {
-                    tomorrowLetterRepo.markLetterAsDelivered(letter.copy(isDelivered = true))
+                    tomorrowLetterRepo.markTMLetterAsReplied(letter.copy(isReplied = true))
                 }
             }
 

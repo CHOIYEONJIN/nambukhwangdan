@@ -21,7 +21,10 @@ data class TomorrowLetterEntity(
     @ColumnInfo(name = "user_id")
     val userId: String,
 
-    val isDelivered: Boolean = false
+    val isArrived: Boolean = false,
+
+    val isReplied: Boolean = false
+
 
 
 )

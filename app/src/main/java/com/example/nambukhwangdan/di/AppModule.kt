@@ -19,6 +19,7 @@ import android.os.Build
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.nambukhwangdan.LetterDeliveryReceiver
+import com.example.nambukhwangdan.data.local.MIGRATION_11_12
 
 val MIGRATION_10_11: Migration = object : Migration(10, 11) {
     override fun migrate(database: SupportSQLiteDatabase) {
@@ -39,7 +40,7 @@ object AppModule {
             AppDatabase::class.java,
             "diary_database"
         )
-            .addMigrations(MIGRATION_10_11)
+            .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
             .build()
     @Singleton
     @Provides
