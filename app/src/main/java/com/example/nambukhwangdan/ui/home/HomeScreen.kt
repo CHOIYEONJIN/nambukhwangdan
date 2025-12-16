@@ -107,12 +107,12 @@ fun HomeScreen(
     val tomorrowLettersToProcess by diaryViewModel.receivedTomorrowLetters.collectAsState(initial = emptyList())
     val hasFutureLetter by diaryViewModel.hasFutureTomorrowLetter.collectAsState(initial = false)
 
-    val actionableItems = remember(lettersToProcess, tomorrowLettersToProcess) {
+    val actionableItems = remember(lettersToProcess, tomorrowLettersToProcess, hasFutureLetter) {
         val letterList = lettersToProcess.map { ActionableItem.ActionableLetter(it) }
 
         val tomorrowList = tomorrowLettersToProcess.map { ActionableItem.ActionableTomorrowLetter(it) }
 
-        val dummyList = if (tomorrowList.isEmpty() && !hasFutureLetter) {
+        val dummyList = if (!hasFutureLetter) {
             val dummyLetter = TomorrowLetter.createDummy(userId = "")
             listOf(ActionableItem.ActionableTomorrowLetter(dummyLetter))
         } else {

@@ -16,6 +16,7 @@ import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetterEntity
 abstract class AppDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
     abstract fun letterDao(): LetterDao
+    abstract fun tomorrowLetterDao(): TomorrowLetterDao
 }
 
 val MIGRATION_10_11: Migration = object : Migration(10, 11) {

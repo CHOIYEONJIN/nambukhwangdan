@@ -83,22 +83,24 @@ class DiaryViewModel @Inject constructor(
 
     val receivedTomorrowLetters = allUnDeliveredLetters
         .map { letters ->
-            // allUnDeliveredLetters (DAO 쿼리: isReplied = 0) 중에서
-            // isArrived가 true인 것만 필터링 (현재 도착한 미답장 편지)
             letters.filter { it.isArrived }
-        }.stateIn(
+        }
+    .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList<TomorrowLetter>()
         )
     val hasFutureTomorrowLetter: StateFlow<Boolean> = allUnDeliveredLetters
         .map { letters ->
-            val now = System.currentTimeMillis()
+            letters.forEach { letter ->
+                // ⭐️ isArrived 값이 true인지 false인지 확인해주세요!
+                Log.d("FinalCheck", "ID: ${letter.id}, isArrived (Boolean): ${letter.isArrived}")
+            }
 
-            // allUnDeliveredLetters (DAO 쿼리: isReplied = 0) 중에서
-            // isArrived가 false이고 (아직 도착 플래그가 설정되지 않았고)
-            // deliveryTimestamp가 현재 시간보다 미래인 편지 확인
-            letters.any { !it.isArrived && it.deliveryTimestamp > now }
+            val hasFuture = letters.any { !it.isArrived }
+            Log.d("FinalCheck", "Calculated hasFutureTomorrowLetter: $hasFuture")
+
+            hasFuture
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
