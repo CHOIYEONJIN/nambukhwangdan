@@ -11,6 +11,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.nambukhwangdan.navigation.Routes
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -74,6 +77,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val isLoggedIn = user != null
         val savedNickname = getNickname()
 
+        if (user != null) {
+            ensureUserDocument(user.uid)
+        }
         // 리스너가 호출될 때는 startDestination을 바꾸지 않고,
         // 닉네임과 로그인 상태만 실시간으로 업데이트합니다.
         _authState.value = _authState.value.copy(
@@ -164,4 +170,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         // 우리는 화면 전환만 요청합니다.
         onSignOutComplete()
     }
+    private fun ensureUserDocument(uid: String) {
+        val firestore = FirebaseFirestore.getInstance()
+
+        firestore.collection("users")
+            .document(uid)
+            .set(
+                mapOf(
+                    "createdAt" to FieldValue.serverTimestamp()
+                ),
+                SetOptions.merge()
+            )
+    }
+
 }

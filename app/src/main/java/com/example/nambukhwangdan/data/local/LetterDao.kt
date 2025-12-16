@@ -23,5 +23,8 @@ interface LetterDao {
 
     @Query("UPDATE letters SET liked = NOT liked WHERE id = :id")
     suspend fun toggleLike(id: String)
+
+    @Query("SELECT COUNT(*) > 0 FROM letters WHERE id = :id")
+    suspend fun exists(id: String): Boolean
 }
 

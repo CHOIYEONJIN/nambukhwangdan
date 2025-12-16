@@ -168,6 +168,14 @@ async (request) => {
   const snapshot = await admin.firestore().collection("users").get();
   const users = snapshot.docs.map((doc) => doc.id);
 
+logger.info("senderId =", senderId);
+logger.info("all user ids =", users);
+const senderDoc = await admin.firestore().doc(`users/${senderId}`).get();
+logger.info("sender users/{uid} exists? =", senderDoc.exists);
+logger.info("sender users/{uid} data =", senderDoc.data());
+logger.info("users snapshot size =", snapshot.size);
+
+
   // 자기 자신 제외
   const candidates = users.filter((id) => id !== senderId);
 
