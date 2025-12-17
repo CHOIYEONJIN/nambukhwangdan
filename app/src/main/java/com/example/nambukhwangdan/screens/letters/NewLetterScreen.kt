@@ -105,19 +105,6 @@ fun NewLetterScreen(
         SimpleDateFormat("M월 d일 (E)", Locale.KOREA).format(Date(dateMillis))
     }
 
-    // ❌ 불필요한 초기 시간 설정 로직 제거 (주석 처리 또는 삭제)
-    /*
-    LaunchedEffect(Unit) {
-        val calendar = Calendar.getInstance().apply {
-            add(Calendar.DAY_OF_YEAR, 1)
-            set(Calendar.HOUR_OF_DAY, 21)
-            set(Calendar.MINUTE, 0)
-        }
-        viewModel.setSelectedDate(calendar.timeInMillis)
-    }
-    */
-
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -155,7 +142,7 @@ fun NewLetterScreen(
                 item {
                     Column(
                         modifier = Modifier
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = 30.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp))
                             .fillMaxWidth().background(Surface, RoundedCornerShape(10.dp))
                             .padding(horizontal = 20.dp, vertical = 10.dp),
@@ -167,8 +154,7 @@ fun NewLetterScreen(
                             horizontalArrangement = Arrangement.Start
                         ) {
                             Text(
-                                // ⭐️ 함수 이름 변경된 것 사용
-                                text = "${formatDate(dateMillis)} 23:00 의 ",
+                                text = "${formatDate(dateMillis)} 의 ",
                                 fontSize = 13.sp,
                                 color = Primary,                 // 강조 색
                                 fontWeight = FontWeight.SemiBold,         // 글자 강조

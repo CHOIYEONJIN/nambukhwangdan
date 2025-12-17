@@ -13,5 +13,6 @@ data class LetterEntity(
     val liked: Boolean = false,
     val date: Long,
     val userId:String,
+    val writerId: String,
     val isReplied: Boolean = false
     )

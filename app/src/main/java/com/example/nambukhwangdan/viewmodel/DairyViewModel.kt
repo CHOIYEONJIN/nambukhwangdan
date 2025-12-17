@@ -13,6 +13,7 @@ import com.example.nambukhwangdan.navigation.Routes
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -157,46 +158,40 @@ class DiaryViewModel @Inject constructor(
         }
     }
 
-    // 전달 시간이 지난 편지들을 확인하고 DiaryEntity로 변환하여 처리하는 함수
-    fun processDueLetters() {
-        viewModelScope.launch {
-            val dueLetters = tomorrowLetterRepo.getDueLettersOnce(System.currentTimeMillis())
 
-            dueLetters.forEach { letter ->
-                val deliveredDiary = buildDiary(
-                    content = "From Yesterday: ${letter.content}",
-                    dateMillis = letter.deliveryTimestamp
-                ).copy(
-                    id = UUID.randomUUID().toString(),
-                    emotion = "",
-                    sticker = null,
-                    replyToId = null,
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis()
-                )
-
-                saveDiary(deliveredDiary)
-                tomorrowLetterRepo.markTMLetterAsReplied(letter)
-            }
-        }
-    }
 
 
     // ========== 초기화 및 동기화 (기존 코드 유지) ==========
 
     init {
-        viewModelScope.launch {
-            userId?.let {
+        // 1. 데이터 동기화 로직 (백그라운드에서만 실행)
+        viewModelScope.launch(Dispatchers.IO) {
+            userId?.let { uid ->
+                Log.d(TAG, "Syncing started on IO thread")
+
+                // 초기 1회성 전체 동기화
                 diaryRepo.syncDiaries()
+
+                // 실시간 리스너 수집도 백그라운드에서 처리
                 diaryRepo.observeRemoteDiaries().collect { diaries ->
-                    diaryRepo.insertDiaries(diaries)
+                    if (diaries.isNotEmpty()) {
+                        diaryRepo.insertDiaries(diaries)
+                        Log.d(TAG, "Synced ${diaries.size} diaries to Room")
+                    }
                 }
             }
         }
+
+        // 2. UI 상태 업데이트 (메인 스레드에서 안전하게 실행)
         viewModelScope.launch {
             _currentYearMonth
-                .flatMapLatest { ym -> diaryRepo.getDiariesByMonth(ym.year, ym.monthValue) }
-                .collect { _currentMonthDiaries.value = it }
+                .flatMapLatest { ym ->
+                    // DB 조회는 IO 스레드에서 하도록 Repository가 설계되어 있어야 합니다.
+                    diaryRepo.getDiariesByMonth(ym.year, ym.monthValue)
+                }
+                .collect { diaries ->
+                    _currentMonthDiaries.value = diaries
+                }
         }
     }
 

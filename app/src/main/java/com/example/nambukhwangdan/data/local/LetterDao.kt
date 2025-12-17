@@ -26,5 +26,8 @@ interface LetterDao {
 
     @Query("SELECT COUNT(*) > 0 FROM letters WHERE id = :id")
     suspend fun exists(id: String): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLetters(letters: List<LetterEntity>)
 }
 

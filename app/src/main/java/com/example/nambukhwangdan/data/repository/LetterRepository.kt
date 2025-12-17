@@ -15,9 +15,12 @@ import com.example.nambukhwangdan.model.Letter.toEntity
 import com.example.nambukhwangdan.model.Letter.toLetter
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
@@ -100,6 +103,7 @@ class LetterRepository @Inject constructor(
     // ⭐️ 알람 예약 로직 (이전에 성공한 TomorrowRepository 로직 재활용)
     // -------------------------------------------------------------
     private fun scheduleLetterDelivery(letterId: String, deliveryTimestamp: Long) {
+        if (deliveryTimestamp <= System.currentTimeMillis()) return
         val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         // [핵심: 권한 체크 및 요청 로직]
@@ -162,67 +166,152 @@ class LetterRepository @Inject constructor(
         content: String
     ) {
         val receiverId = try {
-            FirebaseFunctionsSource().pickRandomUser() // ⭐️ 랜덤 유저 ID 가져오기
+            FirebaseFunctionsSource().pickRandomUser()
         } catch (e: Exception) {
             Log.e("LetterRepo", "❌ pickRandomUser Cloud Function 호출 실패", e)
-            null // 실패 시 null 반환
+            null
         }
 
-        // 🚨 1. 수신자 ID 유효성 검사
         if (receiverId.isNullOrEmpty()) {
-            Log.e("LetterRepo", "❌ 랜덤 수신자를 찾을 수 없습니다. (유저 수 부족 또는 서버 오류)")
-            return // 전송 중단
+            Log.e("LetterRepo", "❌ 랜덤 수신자를 찾을 수 없습니다.")
+            return
         }
 
         val letterId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
 
-        // ⭐️ Letter 모델을 사용하여 데이터 일관성 유지
+        // 1. ⭐️ 기본 편지 생성 (작성자는 무조건 나 'senderId')
         val baseLetter = Letter(
             id = letterId,
             content = content,
             nickname = senderNickname,
             createdAt = now,
-            date = now, // 즉시 도착 (도착 시간)
-            userId = receiverId, // ⭐️ 이 편지의 '소유자' ID (컬렉션 주인)
+            date = now,
+            userId = receiverId, // 🏠 수신자 집으로 배달될 예정이므로 수신자 ID
+            writerId = senderId, // ✍️ 작성자는 나! (나중에 답장 받을 주소)
             replyToId = null,
-            liked = false
+            liked = false,
+            isReplied = false
         )
 
-        // 2. 🔥 [수신자에게 저장]: 'letters' (받은 편지함)
+        // 2. 🔥 [수신자에게 저장]: 상대방의 'letters' 컬렉션
         try {
             firestore.collection("users")
                 .document(receiverId)
                 .collection("letters")
                 .document(letterId)
-                .set(baseLetter) // ⭐️ Letter 모델 객체 저장
+                .set(baseLetter)
                 .await()
-            Log.d("LetterRepo", "✅ 수신자($receiverId)에게 편지 저장 성공")
+            Log.d("LetterRepo", "✅ 수신자($receiverId) 집으로 편지 배달 성공")
         } catch (e: Exception) {
-            Log.e("LetterRepo", "❌ 수신자에게 편지 저장 실패", e)
-            // 수신자에게 저장 실패 시 발신자에게도 저장하지 않도록 여기서 return 가능
+            Log.e("LetterRepo", "❌ 수신자 저장 실패", e)
             return
         }
 
-        // 3. 🔥 [발신자에게 저장]: 'sent_letters' (보낸 편지 기록)
-        // 보낸 사람 컬렉션에 저장할 때는 userId를 senderId로 변경하여 저장
+        // 3. 🔥 [발신자에게 저장]: 나의 'sent_letters' 컬렉션 및 로컬 DB
+        // 내 보관함에 넣을 때는 '집주인(userId)'만 나로 바꿔서 저장합니다.
         val letterForSender = baseLetter.copy(userId = senderId)
 
         try {
+            // 서버(Firestore) 저장
             firestore.collection("users")
                 .document(senderId)
-                .collection("sent_letters") // ⭐️ 'sent_letters' 컬렉션 사용
+                .collection("sent_letters")
                 .document(letterId)
-                .set(letterForSender) // ⭐️ Letter 모델 객체 저장
+                .set(letterForSender)
                 .await()
-            Log.d("LetterRepo", "✅ 발신자($senderId)에게 편지 저장 성공")
+
+            // ⭐️ 로컬 DB(Room) 저장 (toEntity()가 writerId를 포함하고 있어야 함)
+            letterDao.insertLetter(letterForSender.toEntity())
+
+            Log.d("LetterRepo", "✅ 내 보낸 편지함 및 로컬 DB 저장 완료")
         } catch (e: Exception) {
-            Log.e("LetterRepo", "❌ 발신자에게 편지 저장 실패", e)
+            Log.e("LetterRepo", "❌ 발신자 기록 저장 실패", e)
+        }
+    }
+
+    suspend fun sendReplyLetter(replyLetter: Letter, senderId: String) {
+        val receiverId = replyLetter.userId // 이미 persistLetter에서 원본의 writerId로 설정됨
+        val letterId = replyLetter.id
+
+        // 1. 🔥 [수신자에게 저장]: 상대방의 'letters' 컬렉션
+        try {
+            firestore.collection("users")
+                .document(receiverId)
+                .collection("letters")
+                .document(letterId)
+                .set(replyLetter)
+                .await()
+            Log.d("LetterRepo", "✅ 답장 배달 성공 (수신자: $receiverId)")
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "❌ 답장 수신자 저장 실패", e)
+            throw e // 실패 시 호출부로 에러 전달
+        }
+
+        // 2. 🔥 [발신자(나)에게 저장]: 나의 'sent_letters' 및 로컬 DB
+        // 보낸 편지함용 객체 (이미 userId가 receiverId로 되어 있으므로 그대로 저장해도 되지만,
+        // 내 보관함 일관성을 위해 userId를 나로 바꾼 복사본을 로컬/보낸편지함에 저장할 수도 있음)
+        val letterForSenderRecord = replyLetter.copy(userId = senderId)
+
+        try {
+            // 서버 'sent_letters' 저장
+            firestore.collection("users")
+                .document(senderId)
+                .collection("sent_letters")
+                .document(letterId)
+                .set(letterForSenderRecord)
+                .await()
+
+            // 로컬 DB 저장
+            letterDao.insertLetter(letterForSenderRecord.toEntity())
+            Log.d("LetterRepo", "✅ 답장 보낸 기록 저장 완료")
+        } catch (e: Exception) {
+            Log.e("LetterRepo", "❌ 답장 발신 기록 저장 실패", e)
+        }
+
+        // 3. ⭐️ [원본 편지 상태 업데이트]: 답장 완료 처리
+        replyLetter.replyToId?.let { originalId ->
+            try {
+                // 로컬 DB 업데이트
+                letterDao.updateLetterRepliedStatus(originalId, true)
+
+                // (선택사항) 서버의 원본 편지 상태도 바꾸고 싶다면 아래 추가
+                firestore.collection("users")
+                    .document(senderId)
+                    .collection("letters")
+                    .document(originalId)
+                    .update("isReplied", true)
+                    .await()
+
+                Log.d("LetterRepo", "✅ 원본 편지($originalId) 답장 완료 처리 성공")
+            } catch (e: Exception) {
+                Log.e("LetterRepo", "⚠️ 원본 편지 상태 업데이트 실패", e)
+            }
         }
     }
     suspend fun existsLetter(id: String): Boolean {
         return letterDao.exists(id)
     }
+
+    suspend fun syncLettersFromServer(userId: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val snapshot = firestore.collection("users").document(userId)
+                    .collection("letters").get().await()
+
+                val letters = snapshot.toObjects(Letter::class.java)
+                if (letters.isNotEmpty()) {
+                    // List를 통째로 넘기는 DAO 함수를 사용하세요!
+                    letterDao.insertLetters(letters.map { it.toEntity() })
+                }
+            } catch (e: Exception) {
+                Log.e("LetterRepo", "Sync Error", e)
+            }
+        }
+    }
+
+
+
 
 
 }

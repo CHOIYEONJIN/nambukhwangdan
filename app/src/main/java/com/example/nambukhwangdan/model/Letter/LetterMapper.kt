@@ -12,6 +12,7 @@ fun Letter.toEntity(): LetterEntity {
         liked = this.liked,
         date=this.date,
         userId=this.userId,
+        writerId = writerId,
         isReplied = this.isReplied
     )
 }
@@ -26,7 +27,7 @@ fun LetterEntity.toLetter(): Letter {
         liked = this.liked,
         date=this.date,
         userId = this.userId,
+        writerId = writerId,
         isReplied = this.isReplied
-
     )
 }

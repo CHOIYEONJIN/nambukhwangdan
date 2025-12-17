@@ -8,12 +8,15 @@ import com.example.nambukhwangdan.model.Letter.Letter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Date
@@ -26,7 +29,7 @@ class LetterViewModel @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ViewModel() {
     // 실제 사용자 닉네임 저장 변수 (익명/실명 선택의 기준)
-    private var userNickname:String="닉네임"
+    private var userNickname: String = ""
 
     // FireStore에 userNickname을 저장하기 위한 함수
     fun setUserNickname(nickname: String) {
@@ -86,28 +89,53 @@ class LetterViewModel @Inject constructor(
 
     // FireStore, RoomDB에 저장 및 알람 예약
     suspend fun persistLetter(): String {
-        // letter 고유 id 생성 및 letter 객체 생성 로직은 동일
         val letterId = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
+        val myId = userId ?: ""
         val letter = Letter(
             id = letterId,
             content = letterContent.value,
-            nickname = nicknameToUse.value,
-            replyToId = replyToId.value,
-            createdAt = now,
+            nickname = nicknameToUse.value, // 내 닉네임
+            userId = myId,      // 받는 사람: 나
+            writerId = myId,    // 쓴 사람: 나
             date = selectedDateMillis.value,
-            userId = userId ?: ""
+            createdAt = System.currentTimeMillis()
         )
-
-        val uid = userId
-        if (uid != null) {
-            repo.saveAndScheduleLetter(letter, uid)
-        } else {
-            repo.insertLetter(letter)
-        }
-
-
+        repo.saveAndScheduleLetter(letter, myId)
         return letterId
+    }
+    fun sendReply() {
+        val originalId = replyToId.value ?: return // 답장할 대상이 없으면 중단
+        val myId = userId ?: return                // 내 아이디 없으면 중단
+
+        viewModelScope.launch {
+            try {
+                // 1. 원본 편지를 찾아서 '상대방 ID'를 알아냅니다.
+                val originalLetter = allLetters.value.find { it.id == originalId }
+                val targetUserId = originalLetter?.writerId ?: return@launch // 상대방 UID
+
+                // 2. 답장용 Letter 객체 생성
+                val replyLetter = Letter(
+                    id = UUID.randomUUID().toString(),
+                    content = letterContent.value,
+                    nickname = nicknameToUse.value, // 내 닉네임
+                    replyToId = originalId,
+                    createdAt = System.currentTimeMillis(),
+                    date = System.currentTimeMillis(), // 답장은 보통 바로 가니까 현재시간
+                    userId = targetUserId, // 🏠 받는 사람 (상대방)
+                    writerId = myId,       // ✍️ 쓰는 사람 (나)
+                    isReplied = false
+                )
+
+                // 3. 🚀 아까 만든 Repository의 그 함수를 직접 호출!
+                repo.sendReplyLetter(replyLetter, myId)
+
+                // 4. 성공 후 상태 초기화
+                clearStates()
+                Log.d("LetterViewModel", "✅ 답장 전송 프로세스 완료")
+            } catch (e: Exception) {
+                Log.e("LetterViewModel", "❌ 답장 전송 실패", e)
+            }
+        }
     }
 
     private fun clearStates() {
@@ -151,16 +179,18 @@ class LetterViewModel @Inject constructor(
     // 모든 편지 목록 (Room/Firestore 동기화)
     val allLetters = repo.getAllLetters()
         .map { letters ->
-            val now = System.currentTimeMillis()
-            // ⭐️ 핵심 필터링 로직: 도착 시간(letter.date)이 현재 시간(now)보다 작거나 같은 편지만 보여줍니다.
-            letters.filter { letter ->
-                letter.date <= now
+            withContext(Dispatchers.Default) {
+                val now = System.currentTimeMillis()
+                letters.filter { letter ->
+                    letter.date <= now
+                }
             }
         }
+        .distinctUntilChanged()
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            emptyList<Letter>()
+            emptyList()
         )
 
     // 편지 삭제
@@ -204,7 +234,7 @@ class LetterViewModel @Inject constructor(
     // room과 fireStore에 저장된 data를 동기화하는 함수
     fun syncLettersFromFirestore() {
         val uid = userId ?: return
-
+        Log.d("Check", "실행중= syncLettersFromFirestore")
         firestore.collection("users")
             .document(uid)
             .collection("letters")

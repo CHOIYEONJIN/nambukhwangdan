@@ -10,7 +10,7 @@ import com.example.nambukhwangdan.model.TomorrowLetter.TomorrowLetterEntity
 
 @Database(
     entities = [DiaryEntity::class, LetterEntity::class, TomorrowLetterEntity::class],
-    version = 12,        // ← 변경했으면 버전 과거 값보다 꼭 높여야 함
+    version = 13,        // ← 변경했으면 버전 과거 값보다 꼭 높여야 함
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -62,5 +62,12 @@ val MIGRATION_11_12: Migration = object : Migration(11, 12) {
 
         // 4. 새 테이블 이름 변경
         database.execSQL("ALTER TABLE tomorrow_letters_new RENAME TO tomorrow_letters")
+    }
+}
+
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // letters 테이블에 writerId 컬럼을 추가합니다.
+        db.execSQL("ALTER TABLE letters ADD COLUMN writerId TEXT NOT NULL DEFAULT ''")
     }
 }

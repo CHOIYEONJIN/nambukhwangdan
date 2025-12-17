@@ -20,6 +20,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.nambukhwangdan.LetterDeliveryReceiver
 import com.example.nambukhwangdan.data.local.MIGRATION_11_12
+import com.example.nambukhwangdan.data.local.MIGRATION_12_13
 import com.example.nambukhwangdan.data.local.TomorrowLetterDao // ⭐️ TomorrowLetterDao 주입을 위한 임포트
 
 val MIGRATION_10_11: Migration = object : Migration(10, 11) {
@@ -41,7 +42,7 @@ object AppModule {
             AppDatabase::class.java,
             "diary_database"
         )
-            .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
+            .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
             .build()
 
     // 1. Diary DAO 주입
