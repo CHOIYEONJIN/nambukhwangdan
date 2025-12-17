@@ -1,149 +1,219 @@
 package com.example.nambukhwangdan.ui.settings
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.nambukhwangdan.ui.theme.Background
-import com.example.nambukhwangdan.ui.theme.OnSurface
 import com.example.nambukhwangdan.ui.theme.Primary
 import com.example.nambukhwangdan.ui.theme.Surface
+import com.example.nambukhwangdan.ui.theme.Variables
 import com.example.nambukhwangdan.viewmodel.AuthViewModel
 
 @Composable
 fun SettingsScreen(
     authViewModel: AuthViewModel = viewModel(),
-    onNavigateToLogin: () -> Unit // 로그아웃 후 로그인 화면으로 이동할 콜백
+    onNavigateToLogin: () -> Unit
 ) {
-    // AuthViewModel의 상태 관찰
     val authState by authViewModel.authState.collectAsState()
+    val localContext = LocalContext.current
+    // 닉네임 변경 다이얼로그 상태
+    var showNicknameDialog by remember { mutableStateOf(false) }
+    var newNickname by remember { mutableStateOf("") }
 
-    // ⚠️ 3번 문제 해결: 불필요한 자동 로그아웃 로직 제거
-    // if (!authState.isLoading && !authState.isLoggedIn) {
-    //     onNavigateToLogin()
-    //     return
-    // }
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Variables.Color4)
     ) {
-        Text(
-            text = "임시 설정 및 상태 확인",
-            style = MaterialTheme.typography.headlineMedium,
-            color = OnSurface,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                // 닉네임 상태 표시 (로컬 DataStore)
-                StatusItem(
-                    label = "현재 닉네임 (로컬)",
-                    value = authState.currentNickname ?: "미설정"
+            Spacer(modifier = Modifier.height(60.dp))
+            Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Spacer(modifier = Modifier.height(30.dp))
+
+            // 🔹 [그룹 1] 계정 정보 카드
+            Column(
+                modifier = Modifier
+                    .shadow(4.dp, RoundedCornerShape(10.dp))
+                    .fillMaxWidth()
+                    .background(Surface, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 20.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = "계정 설정",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Primary,
+                    modifier = Modifier.padding(top = 15.dp, bottom = 10.dp)
                 )
-                Spacer(Modifier.height(16.dp))
-                // 로그인 상태 표시 (Firebase Auth)
-                StatusItem(
-                    label = "로그인 상태 (Firebase)",
-                    value = if (authState.isLoggedIn) "✅ 로그인됨" else "❌ 로그아웃됨"
-                )
-                Spacer(Modifier.height(8.dp))
-                if (authState.isLoggedIn) {
+
+                // 닉네임 설정 (변경 버튼 포함)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(text = "닉네임", fontSize = 14.sp, color = Color.Black)
+                        Text(text = authState.currentNickname ?: "미설정", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                    }
                     Text(
-                        text = "UID: ${authViewModel.auth.currentUser?.uid ?: "N/A"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurface.copy(alpha = 0.6f)
+                        text = "변경",
+                        fontSize = 13.sp,
+                        color = Primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable {
+                                newNickname = authState.currentNickname ?: ""
+                                showNicknameDialog = true
+                            }
+                            .padding(8.dp)
                     )
+                }
+
+                HorizontalDivider(color = Variables.Color4.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                SettingClickableItem(label = "로그아웃", onClick = { authViewModel.signOut(onNavigateToLogin) })
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 🔹 [그룹 2] 앱 설정 및 지원 카드 (추가 추천 기능)
+            Column(
+                modifier = Modifier
+                    .shadow(4.dp, RoundedCornerShape(10.dp))
+                    .fillMaxWidth()
+                    .background(Surface, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 20.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = "서비스 이용",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Primary,
+                    modifier = Modifier.padding(top = 15.dp, bottom = 10.dp)
+                )
+
+                SettingClickableItem(
+                    label = "알림 설정",
+                    onClick = {
+                        val intent = Intent().apply {
+                            // 💡 모든 Settings 참조를 전체 경로로 적어줍니다.
+                            action = android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                            putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, localContext.packageName)
+                        }
+                        localContext.startActivity(intent)
+                    }
+                )
+                HorizontalDivider(color = Variables.Color4.copy(alpha = 0.5f), thickness = 0.5.dp)
+                SettingInfoItem(label = "문의하기 및 피드백", value = "funnyyul0506@gmail.com")
+            }
+
+            // 🔹 회원 탈퇴 (버튼 대신 하단 텍스트 링크로 배치 - 시각적 부담 감소)
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(
+                text = "회원 탈퇴",
+                fontSize = 12.sp,
+                color = Color.LightGray,
+                modifier = Modifier.clickable { /* TODO: 탈퇴 로직 */ }
+            )
+        }
+
+        // 🔹 닉네임 변경 다이얼로그 (NewLetterScreen 스타일 계승)
+        if (showNicknameDialog) {
+            Dialog(onDismissRequest = { showNicknameDialog = false }) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    modifier = Modifier.padding(20.dp).fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("닉네임 변경", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Spacer(Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = newNickname,
+                            onValueChange = { newNickname = it },
+                            placeholder = { Text("새 닉네임을 입력하세요") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = Color.LightGray
+                            )
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = { showNicknameDialog = false },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                            ) { Text("취소", color = Color.White) }
+
+                            Button(
+                                onClick = {
+                                    authViewModel.updateNickname(newNickname)
+                                    showNicknameDialog = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                            ) { Text("저장", color = Color.White) }
+                        }
+                    }
                 }
             }
         }
-
-        Spacer(Modifier.height(32.dp))
-
-        // 로그아웃 버튼
-        Button(
-            onClick = {
-                // 🚀 오류 해결: onSignOutComplete 인수에 onNavigateToLogin 콜백 전달
-                authViewModel.signOut(onNavigateToLogin)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            enabled = authState.isLoggedIn, // 로그인 상태일 때만 활성화
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Primary
-            )
-        ) {
-            Text(
-                text = "로그아웃",
-                color = Surface,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // 개발자를 위한 힌트
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = "로그아웃 시 시작 경로 재결정 로직 테스트 가능",
-            style = MaterialTheme.typography.bodySmall,
-            color = OnSurface.copy(alpha = 0.5f)
-        )
     }
 }
 
+// 공통 클릭 아이템 컴포넌트
 @Composable
-private fun StatusItem(label: String, value: String) {
+private fun SettingClickableItem(label: String, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = OnSurface
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            color = if (value.contains("✅")) Primary else OnSurface
-        )
+        Text(text = label, fontSize = 14.sp, color = Color.Black)
+        Text(text = ">", fontSize = 14.sp, color = Color.LightGray)
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun SettingsScreenPreview() {
-    MaterialTheme {
-        SettingsScreen(
-            onNavigateToLogin = {},
-            // Preview에서는 실제 ViewModel 대신 더미 데이터를 사용하여 UI를 봅니다.
-            // 실제 앱에서는 viewModel()이 사용됩니다.
-        )
+private fun SettingInfoItem(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, fontSize = 14.sp, color = Color.Black)
+        Text(text = value, fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
     }
 }

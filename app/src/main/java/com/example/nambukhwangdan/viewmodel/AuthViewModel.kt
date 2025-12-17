@@ -69,7 +69,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-
     /**
      * 리스너를 통해 전달받은 Firebase 인증 정보를 바탕으로 AuthState를 업데이트합니다.
      */
@@ -88,6 +87,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             isLoading = false // 리스너가 호출되었다는 것은 초기 로딩이 끝났음을 의미
         )
     }
+
+
 
     /**
      * 앱을 시작할 때 최초로 보여줄 화면(Route)를 결정합니다.
@@ -160,6 +161,49 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         return preferences[PREF_NICKNAME]
     }
 
+
+    fun updateNickname(newNickname: String) {
+        if (newNickname.isBlank()) return
+
+        // 저장 중 상태로 표시 (UI 피드백 제공)
+        _authState.value = _authState.value.copy(isSaving = true)
+
+        viewModelScope.launch {
+            try {
+                // 1. 로컬 DataStore 업데이트
+                dataStore.edit { preferences ->
+                    preferences[PREF_NICKNAME] = newNickname
+                }
+
+                // 2. Firebase Firestore 업데이트 (서버 동기화)
+                // ensureUserDocument 로직이 있는 것으로 보아 서버에도 닉네임을 관리하는 것이 좋습니다.
+                val uid = auth.currentUser?.uid
+                if (uid != null) {
+                    FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(uid)
+                        .update("nickname", newNickname) // 서버의 nickname 필드 업데이트
+                }
+
+                // 3. UI 상태 업데이트
+                _authState.value = _authState.value.copy(
+                    isSaving = false,
+                    currentNickname = newNickname,
+                    saveError = null
+                )
+
+                // 성공 로그 (디버깅용)
+                android.util.Log.d("AuthViewModel", "닉네임 업데이트 성공: $newNickname")
+
+            } catch (e: Exception) {
+                // 에러 발생 시 상태 복구
+                _authState.value = _authState.value.copy(
+                    isSaving = false,
+                    saveError = "닉네임 업데이트 실패: ${e.message}"
+                )
+            }
+        }
+    }
     /**
      * 현재 사용자를 Firebase에서 로그아웃하고, 앱 상태를 업데이트합니다.
      */
