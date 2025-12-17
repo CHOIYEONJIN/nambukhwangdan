@@ -128,8 +128,8 @@ class LetterRepository @Inject constructor(
         // 알람 수신자 정의
         val intent = Intent(applicationContext, LetterDeliveryReceiver::class.java).apply {
             putExtra(LetterDeliveryReceiver.EXTRA_LETTER_ID, letterId)
+            putExtra(LetterDeliveryReceiver.EXTRA_TYPE, LetterDeliveryReceiver.TYPE_GENERAL) // 👈 타입 지정
         }
-
         // PendingIntent 정의
         val pendingIntent = PendingIntent.getBroadcast(
             applicationContext,

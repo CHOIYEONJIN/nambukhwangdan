@@ -23,6 +23,7 @@ import java.time.ZoneId
 import java.util.Date
 import android.provider.Settings
 import android.net.Uri
+import com.example.nambukhwangdan.LetterDeliveryReceiver
 import com.example.nambukhwangdan.LetterDeliveryReceiver.Companion.EXTRA_LETTER_ID
 
 /**
@@ -156,8 +157,9 @@ class TomorrowLetterRepository @Inject constructor(
             }
         }
 
-        val intent = Intent(applicationContext, com.example.nambukhwangdan.LetterDeliveryReceiver::class.java).apply {
-            putExtra(EXTRA_LETTER_ID, letterId)
+        val intent = Intent(applicationContext, LetterDeliveryReceiver::class.java).apply {
+            putExtra(LetterDeliveryReceiver.EXTRA_LETTER_ID, letterId)
+            putExtra(LetterDeliveryReceiver.EXTRA_TYPE, LetterDeliveryReceiver.TYPE_TOMORROW) // 👈 타입 지정
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

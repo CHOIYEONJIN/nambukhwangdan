@@ -31,6 +31,9 @@ class LetterDeliveryReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_LETTER_ID = "EXTRA_LETTER_ID"
+        const val EXTRA_TYPE = "EXTRA_TYPE" // 👈 추가
+        const val TYPE_TOMORROW = "TOMORROW"
+        const val TYPE_GENERAL = "GENERAL"
         private const val TAG = "DeliveryReceiver"
         const val CHANNEL_ID = "tomorrow_letter_channel"
         const val NOTIFICATION_ID_BASE = 1000
