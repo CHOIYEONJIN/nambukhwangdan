@@ -1,11 +1,15 @@
-package com.example.nambukhwangdan // ⭐️ 실제 프로젝트 패키지 경로로 수정
+package com.example.nambukhwangdan
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.example.nambukhwangdan.data.repository.LetterRepository
 import com.example.nambukhwangdan.data.repository.TomorrowLetterRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -13,94 +17,103 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ⭐️ Hilt를 통해 Repository를 주입받기 위해 @AndroidEntryPoint 사용
 @AndroidEntryPoint
 class LetterDeliveryReceiver : BroadcastReceiver() {
 
-    // ⭐️ 주입: Repository를 통해 DB 조회 및 업데이트를 수행합니다.
     @Inject
-    lateinit var repository: TomorrowLetterRepository
+    lateinit var tomorrowRepository: TomorrowLetterRepository
 
-    // ⭐️ 주입: 알림 채널 관리 및 알림 발송을 위한 NotificationManagerCompat
+    @Inject
+    lateinit var letterRepository: LetterRepository
+
     @Inject
     lateinit var notificationManager: NotificationManagerCompat
 
     companion object {
         const val EXTRA_LETTER_ID = "EXTRA_LETTER_ID"
         private const val TAG = "DeliveryReceiver"
-        const val CHANNEL_ID = "tomorrow_letter_channel" // 알림 채널 ID
-        const val NOTIFICATION_ID_BASE = 1000 // 알림 ID 베이스
+        const val CHANNEL_ID = "tomorrow_letter_channel"
+        const val NOTIFICATION_ID_BASE = 1000
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        // BroadcastReceiver는 메인 스레드에서 실행되므로,
-        // 오래 걸리는 DB/네트워크 작업은 코루틴으로 처리해야 합니다.
-        CoroutineScope(Dispatchers.IO).launch {
-            val letterId = intent.getStringExtra(EXTRA_LETTER_ID)
-            Log.d(TAG, "Received alarm for Letter ID: $letterId")
+        val letterId = intent.getStringExtra(EXTRA_LETTER_ID)
+        Log.d(TAG, "⏰ 알람 수신 - Letter ID: $letterId")
 
-            if (letterId != null) {
+        if (letterId != null) {
+            CoroutineScope(Dispatchers.IO).launch {
                 processAndNotify(context, letterId)
             }
         }
     }
 
-    // -------------------------------------------------------------
-    // ⭐️ 핵심 로직: 편지 처리 및 알림 발송
-    // -------------------------------------------------------------
     private suspend fun processAndNotify(context: Context, letterId: String) {
-        // 1. 편지 조회
-        val letter = repository.getTomorrowLetterById(letterId)
-        if (letter == null) {
-            Log.w("DeliveryReceiver", "삭제된 편지 → 알람 처리 중단")
-            return
-        }
-        if (letter != null) {
-            // 2. 편지 상태 업데이트 (전달됨으로 표시)
-            // (ViewModel이 처리하는 것이 일반적이나, 여기서는 Receiver에서 직접 호출)
-            repository.markLetterAsArrived(letter)
+        var finalContent: String? = null
+        var finalTitle = ""
 
-            // 3. 시스템 알림 생성 및 발송
-            showNotification(context, letterId, letter.content)
+        // 1. 우선 '내일의 편지'에서 조회
+        val tomorrowLetter = tomorrowRepository.getTomorrowLetterById(letterId)
 
-            Log.i(TAG, "Letter $letterId successfully processed and notified.")
+        if (tomorrowLetter != null) {
+            Log.d(TAG, "✅ 내일의 편지 매칭됨")
+            finalContent = tomorrowLetter.content
+            finalTitle = "어제의 나에게서 편지가 도착했어요! 📬"
+            tomorrowRepository.markLetterAsArrived(tomorrowLetter)
         } else {
-            Log.e(TAG, "❌ Letter ID $letterId not found in DB.")
+            // 2. 없으면 '일반 편지'에서 조회
+            val generalLetter = letterRepository.getLetterById(letterId)
+            if (generalLetter != null) {
+                Log.d(TAG, "✅ 일반 편지 매칭됨")
+                finalContent = generalLetter.content
+                finalTitle = "편지가 도착했습니다! ✉️"
+            }
+        }
+
+        // 3. 데이터를 찾았다면 알림 발송
+        if (finalContent != null) {
+            showNotification(context, letterId, finalContent, finalTitle)
+            Log.i(TAG, "🎉 알림 프로세스 성공: $letterId")
+        } else {
+            Log.e(TAG, "❌ DB에서 ID를 찾을 수 없음: $letterId")
         }
     }
 
-    // -------------------------------------------------------------
-    // ⭐️ 시스템 알림 생성 로직
-    // -------------------------------------------------------------
-    private fun showNotification(context: Context, letterId: String, content: String) {
-        // 🔴 Android 13+ 알림 권한 체크
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val hasPermission =
-                context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-                        android.content.pm.PackageManager.PERMISSION_GRANTED
+    private fun showNotification(context: Context, letterId: String, content: String, title: String) {
+        // [필수] Android 8.0 이상을 위한 알림 채널 생성
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "편지 도착 알림",
+                NotificationManager.IMPORTANCE_HIGH // 중요도 HIGH여야 팝업이 뜸
+            ).apply {
+                description = "편지가 도착했을 때 알려드립니다."
+            }
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
 
+        // Android 13+ 알림 권한 체크
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
             if (!hasPermission) {
-                Log.w(TAG, "POST_NOTIFICATIONS 권한 없음 → 알림 스킵")
+                Log.w(TAG, "❌ 알림 권한이 없어 알림을 띄우지 못했습니다.")
                 return
             }
         }
 
-        // 1. 알림 내용 구성
+        // 알림 생성
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_email) // 앱 아이콘으로 대체 필요
-            .setContentTitle("내일의 나에게서 편지가 도착했어요! 📬")
-            // 편지 내용 일부를 표시
-            .setContentText(content.substring(0, minOf(content.length, 100)) + "...")
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setContentTitle(title) // 내일의 편지/일반 편지 제목 분기 적용
+            .setContentText(if (content.length > 30) content.take(30) + "..." else content)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true) // 탭하면 알림 제거
-            // 큰 텍스트 스타일을 사용하여 편지 내용을 더 보여줍니다.
+            .setAutoCancel(true)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .build()
 
-        // 2. 알림 발송 (각 편지마다 고유한 알림 ID를 사용)
-        // 같은 편지 ID의 해시코드를 사용하면 같은 알림을 덮어씁니다.
         notificationManager.notify(
-            NOTIFICATION_ID_BASE + letterId.hashCode(), // 고유한 알림 ID
+            NOTIFICATION_ID_BASE + letterId.hashCode(),
             notification
         )
     }

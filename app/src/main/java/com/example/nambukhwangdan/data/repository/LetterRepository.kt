@@ -86,6 +86,10 @@ class LetterRepository @Inject constructor(
         letterDao.updateLetterRepliedStatus(letterId, true)
         Log.d("LetterRepo", "✅ Letter $letterId marked as replied (Local DB).")
     }
+    suspend fun getLetterById(letterId: String): Letter? {
+        // letterDao에서 Entity를 가져와서 Letter 객체로 변환합니다.
+        return letterDao.getLetterById(letterId)?.toLetter()
+    }
 
     // 편지 쓰기 플로우를 위한 통합 함수
     suspend fun saveAndScheduleLetter(letter: Letter, userId: String) {

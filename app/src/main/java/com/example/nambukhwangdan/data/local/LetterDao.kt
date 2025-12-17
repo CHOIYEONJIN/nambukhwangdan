@@ -29,5 +29,8 @@ interface LetterDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLetters(letters: List<LetterEntity>)
+
+    @Query("SELECT * FROM letters WHERE id = :letterId")
+    suspend fun getLetterById(letterId: String): LetterEntity?
 }
 
