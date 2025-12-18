@@ -133,7 +133,7 @@ class LetterRepository @Inject constructor(
         // PendingIntent 정의
         val pendingIntent = PendingIntent.getBroadcast(
             applicationContext,
-            letterId.hashCode(),
+            letterId.hashCode()+2000,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

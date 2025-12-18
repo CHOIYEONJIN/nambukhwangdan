@@ -112,7 +112,7 @@ fun HomeScreen(
 
         val tomorrowList = tomorrowLettersToProcess.map { ActionableItem.ActionableTomorrowLetter(it) }
 
-        val dummyList = if (!hasFutureLetter) {
+        val dummyList = if (tomorrowList.isEmpty() && !hasFutureLetter) {
             val dummyLetter = TomorrowLetter.createDummy(userId = "")
             listOf(ActionableItem.ActionableTomorrowLetter(dummyLetter))
         } else {

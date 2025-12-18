@@ -164,7 +164,7 @@ class TomorrowLetterRepository @Inject constructor(
 
         val pendingIntent = PendingIntent.getBroadcast(
             applicationContext,
-            letterId.hashCode(),
+            letterId.hashCode()+1000,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

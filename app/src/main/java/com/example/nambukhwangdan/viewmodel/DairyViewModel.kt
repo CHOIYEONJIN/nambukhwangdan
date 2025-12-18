@@ -162,9 +162,9 @@ class DiaryViewModel @Inject constructor(
 
 
     // ========== 초기화 및 동기화 (기존 코드 유지) ==========
-
+    private var isSyncing = false // 클래스 상단 변수 선언부에 추가
     init {
-        // 1. 데이터 동기화 로직 (백그라운드에서만 실행)
+        // 1. [동기화 로직] 서버 데이터를 로컬 Room에 저장 (백그라운드)
         viewModelScope.launch(Dispatchers.IO) {
             userId?.let { uid ->
                 Log.d(TAG, "Syncing started on IO thread")
@@ -172,24 +172,49 @@ class DiaryViewModel @Inject constructor(
                 // 초기 1회성 전체 동기화
                 diaryRepo.syncDiaries()
 
-                // 실시간 리스너 수집도 백그라운드에서 처리
-                diaryRepo.observeRemoteDiaries().collect { diaries ->
-                    if (diaries.isNotEmpty()) {
-                        diaryRepo.insertDiaries(diaries)
-                        Log.d(TAG, "Synced ${diaries.size} diaries to Room")
+                // 실시간 리스너 수집
+                diaryRepo.observeRemoteDiaries()
+                    .collect { remoteDiaries ->
+                        // 이미 싱크 중이거나 데이터가 없으면 무시
+                        if (isSyncing || remoteDiaries.isEmpty()) return@collect
+
+                        isSyncing = true
+                        try {
+                            val currentLocal = allDiaries.value
+
+                            // ⭐ 시간(updatedAt) 대신 실제 내용(Content)이 다른 것만 필터링
+                            val newData = remoteDiaries.filter { remote ->
+                                val local = currentLocal.find { it.id == remote.id }
+                                // 로컬에 없거나, 내용 중 하나라도 다른 경우만 수락
+                                local == null || (
+                                        remote.content != local.content ||
+                                                remote.emotion != local.emotion ||
+                                                remote.sticker != local.sticker
+                                        )
+                            }
+
+                            if (newData.isNotEmpty()) {
+                                diaryRepo.insertDiaries(newData)
+                                Log.d(TAG, "Actually inserted ${newData.size} new/updated diaries by content comparison")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Sync error: ${e.message}")
+                        } finally {
+                            isSyncing = false // 작업 완료 후 다시 허용
+                        }
                     }
-                }
             }
         }
 
-        // 2. UI 상태 업데이트 (메인 스레드에서 안전하게 실행)
+        // 2. [UI 로직] 월별 일기 목록 상태 업데이트 (메인 스레드)
         viewModelScope.launch {
             _currentYearMonth
                 .flatMapLatest { ym ->
-                    // DB 조회는 IO 스레드에서 하도록 Repository가 설계되어 있어야 합니다.
+                    // 날짜가 바뀔 때마다 해당 월의 데이터를 Room에서 가져옴
                     diaryRepo.getDiariesByMonth(ym.year, ym.monthValue)
                 }
                 .collect { diaries ->
+                    // 화면에 보여줄 데이터를 업데이트
                     _currentMonthDiaries.value = diaries
                 }
         }
